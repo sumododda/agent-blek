@@ -889,6 +889,92 @@ async def cmd_scan_nomore403(args: argparse.Namespace) -> None:
         await db.close()
 
 
+async def cmd_scan_jsluice_urls(args: argparse.Namespace) -> None:
+    scope = _load_scope(args.program)
+    runner = _make_runner(scope)
+    db = await _get_db()
+    try:
+        from bba.tools.jsluice import JsluiceTool
+        tool = JsluiceTool(runner=runner, db=db, program=args.program)
+        result = await tool.run_urls(args.js_url, domain=args.domain)
+        _output(result)
+    finally:
+        await db.close()
+
+
+async def cmd_scan_jsluice_secrets(args: argparse.Namespace) -> None:
+    scope = _load_scope(args.program)
+    runner = _make_runner(scope)
+    db = await _get_db()
+    try:
+        from bba.tools.jsluice import JsluiceTool
+        tool = JsluiceTool(runner=runner, db=db, program=args.program)
+        result = await tool.run_secrets(args.js_url, domain=args.domain)
+        _output(result)
+    finally:
+        await db.close()
+
+
+async def cmd_scan_subzy(args: argparse.Namespace) -> None:
+    scope = _load_scope(args.program)
+    runner = _make_runner(scope)
+    db = await _get_db()
+    try:
+        from bba.tools.subzy import SubzyTool
+        if Path(args.targets).is_file():
+            targets = Path(args.targets).read_text().strip().splitlines()
+        else:
+            targets = [t.strip() for t in args.targets.split(",") if t.strip()]
+        tool = SubzyTool(runner=runner, db=db, program=args.program)
+        work_dir = OUTPUT_DIR / "scan"
+        work_dir.mkdir(parents=True, exist_ok=True)
+        result = await tool.run(targets, work_dir)
+        _output(result)
+    finally:
+        await db.close()
+
+
+async def cmd_scan_clairvoyance(args: argparse.Namespace) -> None:
+    scope = _load_scope(args.program)
+    runner = _make_runner(scope)
+    db = await _get_db()
+    try:
+        from bba.tools.clairvoyance import ClairvoyanceTool
+        tool = ClairvoyanceTool(runner=runner, db=db, program=args.program)
+        result = await tool.run(args.url, wordlist=args.wordlist)
+        _output(result)
+    finally:
+        await db.close()
+
+
+async def cmd_scan_cache_scanner(args: argparse.Namespace) -> None:
+    scope = _load_scope(args.program)
+    runner = _make_runner(scope)
+    db = await _get_db()
+    try:
+        from bba.tools.cache_scanner import CacheScannerTool
+        tool = CacheScannerTool(runner=runner, db=db, program=args.program)
+        result = await tool.run(args.url)
+        _output(result)
+    finally:
+        await db.close()
+
+
+async def cmd_recon_cewler(args: argparse.Namespace) -> None:
+    scope = _load_scope(args.program)
+    runner = _make_runner(scope)
+    db = await _get_db()
+    try:
+        from bba.tools.cewler import CewlerTool
+        tool = CewlerTool(runner=runner, db=db, program=args.program)
+        work_dir = OUTPUT_DIR / "recon"
+        work_dir.mkdir(parents=True, exist_ok=True)
+        result = await tool.run(args.url, work_dir, depth=args.depth)
+        _output(result)
+    finally:
+        await db.close()
+
+
 # --- Phase 4 recon command handlers ---
 
 async def cmd_recon_uro(args: argparse.Namespace) -> None:
@@ -1178,6 +1264,12 @@ def build_parser() -> argparse.ArgumentParser:
     qsr.add_argument("--payload", required=True, help="Payload to replace query string values")
     qsr.set_defaults(func=cmd_recon_qsreplace)
 
+    cew = recon_sub.add_parser("cewler", help="Custom wordlist generation from target content")
+    cew.add_argument("url", help="Target URL to crawl")
+    cew.add_argument("--depth", type=int, default=2, help="Crawl depth (default: 2)")
+    cew.add_argument("--program", required=True, help="Program name")
+    cew.set_defaults(func=cmd_recon_cewler)
+
     # --- scan ---
     scan = subparsers.add_parser("scan", help="Vulnerability scanning tools")
     scan_sub = scan.add_subparsers(dest="tool", required=True)
@@ -1356,6 +1448,34 @@ def build_parser() -> argparse.ArgumentParser:
     nm4.add_argument("url", help="URL returning 403")
     nm4.add_argument("--program", required=True, help="Program name")
     nm4.set_defaults(func=cmd_scan_nomore403)
+
+    jsu = scan_sub.add_parser("jsluice-urls", help="Extract URLs from JS files (AST-based)")
+    jsu.add_argument("js_url", help="JavaScript file URL or path")
+    jsu.add_argument("--domain", required=True, help="Associated domain")
+    jsu.add_argument("--program", required=True, help="Program name")
+    jsu.set_defaults(func=cmd_scan_jsluice_urls)
+
+    jss = scan_sub.add_parser("jsluice-secrets", help="Extract secrets from JS files (AST-based)")
+    jss.add_argument("js_url", help="JavaScript file URL or path")
+    jss.add_argument("--domain", required=True, help="Associated domain")
+    jss.add_argument("--program", required=True, help="Program name")
+    jss.set_defaults(func=cmd_scan_jsluice_secrets)
+
+    sz = scan_sub.add_parser("subzy", help="Subdomain takeover detection")
+    sz.add_argument("targets", help="Targets file or comma-separated domains")
+    sz.add_argument("--program", required=True, help="Program name")
+    sz.set_defaults(func=cmd_scan_subzy)
+
+    cv = scan_sub.add_parser("clairvoyance", help="GraphQL schema reconstruction")
+    cv.add_argument("url", help="GraphQL endpoint URL")
+    cv.add_argument("--wordlist", default=None, help="Custom wordlist for field brute-forcing")
+    cv.add_argument("--program", required=True, help="Program name")
+    cv.set_defaults(func=cmd_scan_clairvoyance)
+
+    cs = scan_sub.add_parser("cache-scanner", help="Web cache poisoning/deception detection")
+    cs.add_argument("url", help="Target URL")
+    cs.add_argument("--program", required=True, help="Program name")
+    cs.set_defaults(func=cmd_scan_cache_scanner)
 
     # --- db ---
     db = subparsers.add_parser("db", help="Database queries")
