@@ -1,0 +1,12 @@
+program: blekcipher
+platform: self-hosted
+in_scope:
+  domains:
+    - "app.blekcipher.com"
+    - "*.blekcipher.com"
+    - "blekcipher.com"
+out_of_scope:
+  domains: []
+  paths:
+    - "/logout"
+    - "/account/delete"

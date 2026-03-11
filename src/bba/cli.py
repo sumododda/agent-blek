@@ -18,9 +18,7 @@ Usage:
     bba recon tlsx <targets> --program <prog>
     bba recon waymore <domain> --program <prog>
     bba recon graphw00f <url> --program <prog>
-    bba recon getjs <targets> --program <prog>
     bba recon shodan <query> --program <prog> [--domain]
-    bba recon github-dork <org> --program <prog>
     bba scan nuclei <targets_file> --program <prog> [--severity] [--tags] [--rate-limit]
     bba scan ffuf <url-with-FUZZ> --program <prog> [--wordlist]
     bba scan sqlmap <url> --program <prog>
@@ -28,9 +26,6 @@ Usage:
     bba scan feroxbuster <url> --program <prog> [--wordlist] [--depth 3]
     bba scan arjun <url> --program <prog>
     bba scan paramspider <domain> --program <prog>
-    bba scan linkfinder <url> --program <prog>
-    bba scan secretfinder <url> --program <prog>
-    bba scan kiterunner <url> --program <prog> [--wordlist]
     bba scan uncover <query> --program <prog> [--engines]
     bba scan s3scanner <bucket> --program <prog>
     bba scan retirejs <path> --program <prog> [--domain]
@@ -41,7 +36,6 @@ Usage:
     bba scan nuclei-dast <targets> --program <prog> [--rate-limit] [--concurrency]
     bba scan testssl <url> --program <prog>
     bba scan sslyze <target> --program <prog>
-    bba scan subjack <targets> --program <prog>
     bba scan nikto <url> --program <prog>
     bba scan security-headers <url> --program <prog>
     bba scan crlfuzz <target> --program <prog>
@@ -50,9 +44,7 @@ Usage:
     bba scan ghauri <url> --program <prog> [--level N] [--technique T]
     bba scan nosqli <url> --program <prog>
     bba scan xsstrike <url> --program <prog> [--blind] [--crawl]
-    bba scan corscanner <url> --program <prog>
     bba scan jwt-tool <token> --program <prog> --domain <domain> [--mode scan|crack] [--wordlist path]
-    bba scan smuggler <url> --program <prog>
     bba scan ppfuzz <targets> --program <prog>
     bba scan interactsh-generate --program <prog> [--count 10] [--server url]
     bba scan interactsh-poll <session-file> --program <prog> --domain <d>
@@ -414,26 +406,6 @@ async def cmd_recon_graphw00f(args: argparse.Namespace) -> None:
         await db.close()
 
 
-async def cmd_recon_getjs(args: argparse.Namespace) -> None:
-    scope = _load_scope(args.program)
-    runner = _make_runner(scope)
-    db = await _get_db()
-    try:
-        from bba.tools.getjs import GetjsTool
-        targets_file = Path(args.targets)
-        if targets_file.exists():
-            targets = [l.strip() for l in targets_file.read_text().splitlines() if l.strip()]
-        else:
-            targets = [t.strip() for t in args.targets.split(",")]
-        tool = GetjsTool(runner=runner, db=db, program=args.program)
-        work_dir = OUTPUT_DIR / "recon"
-        work_dir.mkdir(parents=True, exist_ok=True)
-        result = await tool.run(targets, work_dir=work_dir)
-        _output(result)
-    finally:
-        await db.close()
-
-
 async def cmd_recon_shodan(args: argparse.Namespace) -> None:
     scope = _load_scope(args.program)
     runner = _make_runner(scope)
@@ -442,19 +414,6 @@ async def cmd_recon_shodan(args: argparse.Namespace) -> None:
         from bba.tools.shodan_cli import ShodanTool
         tool = ShodanTool(runner=runner, db=db, program=args.program)
         result = await tool.run(args.query, domain=args.domain or args.query)
-        _output(result)
-    finally:
-        await db.close()
-
-
-async def cmd_recon_github_dork(args: argparse.Namespace) -> None:
-    scope = _load_scope(args.program)
-    runner = _make_runner(scope)
-    db = await _get_db()
-    try:
-        from bba.tools.github_dorker import GithubDorkerTool
-        tool = GithubDorkerTool(runner=runner, db=db, program=args.program)
-        result = await tool.run(args.org)
         _output(result)
     finally:
         await db.close()
@@ -572,48 +531,6 @@ async def cmd_scan_paramspider(args: argparse.Namespace) -> None:
         from bba.tools.paramspider import ParamspiderTool
         tool = ParamspiderTool(runner=runner, db=db, program=args.program)
         result = await tool.run(args.domain)
-        _output(result)
-    finally:
-        await db.close()
-
-
-async def cmd_scan_linkfinder(args: argparse.Namespace) -> None:
-    scope = _load_scope(args.program)
-    runner = _make_runner(scope)
-    db = await _get_db()
-    try:
-        from bba.tools.linkfinder import LinkfinderTool
-        tool = LinkfinderTool(runner=runner, db=db, program=args.program)
-        result = await tool.run(args.url)
-        _output(result)
-    finally:
-        await db.close()
-
-
-async def cmd_scan_secretfinder(args: argparse.Namespace) -> None:
-    scope = _load_scope(args.program)
-    runner = _make_runner(scope)
-    db = await _get_db()
-    try:
-        from bba.tools.secretfinder import SecretfinderTool
-        tool = SecretfinderTool(runner=runner, db=db, program=args.program)
-        result = await tool.run(args.url)
-        _output(result)
-    finally:
-        await db.close()
-
-
-async def cmd_scan_kiterunner(args: argparse.Namespace) -> None:
-    scope = _load_scope(args.program)
-    runner = _make_runner(scope)
-    db = await _get_db()
-    try:
-        from bba.tools.kiterunner import KiterunnerTool
-        tool = KiterunnerTool(runner=runner, db=db, program=args.program)
-        result = await tool.run(
-            target_url=args.url,
-            wordlist=args.wordlist,
-        )
         _output(result)
     finally:
         await db.close()
@@ -793,26 +710,6 @@ async def cmd_scan_sslyze(args: argparse.Namespace) -> None:
         await db.close()
 
 
-async def cmd_scan_subjack(args: argparse.Namespace) -> None:
-    scope = _load_scope(args.program)
-    runner = _make_runner(scope)
-    db = await _get_db()
-    try:
-        from bba.tools.subjack import SubjackTool
-        targets_file = Path(args.targets)
-        if targets_file.exists():
-            domains = [l.strip() for l in targets_file.read_text().splitlines() if l.strip()]
-        else:
-            domains = [t.strip() for t in args.targets.split(",")]
-        tool = SubjackTool(runner=runner, db=db, program=args.program)
-        work_dir = OUTPUT_DIR / "scan"
-        work_dir.mkdir(parents=True, exist_ok=True)
-        result = await tool.run(domains, work_dir=work_dir)
-        _output(result)
-    finally:
-        await db.close()
-
-
 async def cmd_scan_nikto(args: argparse.Namespace) -> None:
     scope = _load_scope(args.program)
     runner = _make_runner(scope)
@@ -919,19 +816,6 @@ async def cmd_scan_xsstrike(args: argparse.Namespace) -> None:
         await db.close()
 
 
-async def cmd_scan_corscanner(args: argparse.Namespace) -> None:
-    scope = _load_scope(args.program)
-    runner = _make_runner(scope)
-    db = await _get_db()
-    try:
-        from bba.tools.corscanner import CORScannerTool
-        tool = CORScannerTool(runner=runner, db=db, program=args.program)
-        result = await tool.run(args.url)
-        _output(result)
-    finally:
-        await db.close()
-
-
 async def cmd_scan_jwt_tool(args: argparse.Namespace) -> None:
     scope = _load_scope(args.program)
     runner = _make_runner(scope)
@@ -940,19 +824,6 @@ async def cmd_scan_jwt_tool(args: argparse.Namespace) -> None:
         from bba.tools.jwt_tool import JwtToolTool
         tool = JwtToolTool(runner=runner, db=db, program=args.program)
         result = await tool.run(args.token, domain=args.domain, mode=args.mode, wordlist=args.wordlist)
-        _output(result)
-    finally:
-        await db.close()
-
-
-async def cmd_scan_smuggler(args: argparse.Namespace) -> None:
-    scope = _load_scope(args.program)
-    runner = _make_runner(scope)
-    db = await _get_db()
-    try:
-        from bba.tools.smuggler import SmugglerTool
-        tool = SmugglerTool(runner=runner, db=db, program=args.program)
-        result = await tool.run(args.url)
         _output(result)
     finally:
         await db.close()
@@ -1298,21 +1169,11 @@ def build_parser() -> argparse.ArgumentParser:
     gwf.add_argument("--program", required=True, help="Program name")
     gwf.set_defaults(func=cmd_recon_graphw00f)
 
-    gjs = recon_sub.add_parser("getjs", help="JavaScript file extraction")
-    gjs.add_argument("targets", help="Targets file or comma-separated URLs")
-    gjs.add_argument("--program", required=True, help="Program name")
-    gjs.set_defaults(func=cmd_recon_getjs)
-
     sh = recon_sub.add_parser("shodan", help="Shodan search")
     sh.add_argument("query", help="Shodan search query")
     sh.add_argument("--domain", default=None, help="Associated domain")
     sh.add_argument("--program", required=True, help="Program name")
     sh.set_defaults(func=cmd_recon_shodan)
-
-    gd = recon_sub.add_parser("github-dork", help="GitHub dorking for secrets")
-    gd.add_argument("org", help="Target organization or domain")
-    gd.add_argument("--program", required=True, help="Program name")
-    gd.set_defaults(func=cmd_recon_github_dork)
 
     uro = recon_sub.add_parser("uro", help="URL deduplication and filtering")
     uro.add_argument("targets", help="Targets file or comma-separated URLs")
@@ -1373,22 +1234,6 @@ def build_parser() -> argparse.ArgumentParser:
     ps.add_argument("--program", required=True, help="Program name")
     ps.set_defaults(func=cmd_scan_paramspider)
 
-    lf = scan_sub.add_parser("linkfinder", help="JavaScript endpoint extraction")
-    lf.add_argument("url", help="Target URL")
-    lf.add_argument("--program", required=True, help="Program name")
-    lf.set_defaults(func=cmd_scan_linkfinder)
-
-    sfn = scan_sub.add_parser("secretfinder", help="JavaScript secret extraction")
-    sfn.add_argument("url", help="Target URL")
-    sfn.add_argument("--program", required=True, help="Program name")
-    sfn.set_defaults(func=cmd_scan_secretfinder)
-
-    kr = scan_sub.add_parser("kiterunner", help="API endpoint brute-forcing")
-    kr.add_argument("url", help="Target URL")
-    kr.add_argument("--program", required=True, help="Program name")
-    kr.add_argument("--wordlist", default=None, help="Wordlist path")
-    kr.set_defaults(func=cmd_scan_kiterunner)
-
     uc = scan_sub.add_parser("uncover", help="Search engine discovery")
     uc.add_argument("query", help="Search query")
     uc.add_argument("--engines", default=None, help="Engines (default: shodan,censys,fofa)")
@@ -1446,11 +1291,6 @@ def build_parser() -> argparse.ArgumentParser:
     sl.add_argument("--program", required=True, help="Program name")
     sl.set_defaults(func=cmd_scan_sslyze)
 
-    sj = scan_sub.add_parser("subjack", help="Subdomain takeover detection")
-    sj.add_argument("targets", help="Targets file or comma-separated domains")
-    sj.add_argument("--program", required=True, help="Program name")
-    sj.set_defaults(func=cmd_scan_subjack)
-
     nk = scan_sub.add_parser("nikto", help="Web server vulnerability scanning")
     nk.add_argument("url", help="Target URL")
     nk.add_argument("--program", required=True, help="Program name")
@@ -1495,11 +1335,6 @@ def build_parser() -> argparse.ArgumentParser:
     xss.add_argument("--crawl", action="store_true", help="Enable crawling mode")
     xss.set_defaults(func=cmd_scan_xsstrike)
 
-    cors = scan_sub.add_parser("corscanner", help="CORS misconfiguration scanning")
-    cors.add_argument("url", help="Target URL")
-    cors.add_argument("--program", required=True, help="Program name")
-    cors.set_defaults(func=cmd_scan_corscanner)
-
     jwt = scan_sub.add_parser("jwt-tool", help="JWT token analysis and attack")
     jwt.add_argument("token", help="JWT token to test")
     jwt.add_argument("--program", required=True, help="Program name")
@@ -1507,11 +1342,6 @@ def build_parser() -> argparse.ArgumentParser:
     jwt.add_argument("--mode", default="scan", help="Mode: scan or crack (default: scan)")
     jwt.add_argument("--wordlist", default=None, help="Wordlist path for crack mode")
     jwt.set_defaults(func=cmd_scan_jwt_tool)
-
-    smg = scan_sub.add_parser("smuggler", help="HTTP request smuggling detection")
-    smg.add_argument("url", help="Target URL")
-    smg.add_argument("--program", required=True, help="Program name")
-    smg.set_defaults(func=cmd_scan_smuggler)
 
     ppf = scan_sub.add_parser("ppfuzz", help="Prototype pollution fuzzing")
     ppf.add_argument("targets", help="Targets file or comma-separated URLs")
