@@ -62,9 +62,17 @@ Usage:
     bba db js-files --program <prog>
     bba db secrets --program <prog> [--status]
     bba db screenshots --program <prog>
+    bba scan notify <message> --program <prog> [--provider-config path]
+    bba scan notify-findings --program <prog> [--severity medium]
+    bba db scan-history --program <prog>
+    bba db scan-status <run_id> --program <prog>
+    bba db scan-diff <old_id> <new_id> --category subdomains --program <prog>
+    bba scope import-h1 <handle> [--name name] [--output path]
+    bba scope import-bc <handle> [--name name] [--output path]
     bba report --program <prog>
     bba wordlist download [--name seclists|assetnote|onelistforall|resolvers|all]
     bba wordlist list
+    bba --dry-run <any command>   # Log commands without execution
 """
 
 from __future__ import annotations
@@ -1121,6 +1129,132 @@ async def cmd_db_screenshots(args: argparse.Namespace) -> None:
         await db.close()
 
 
+# --- Scan state commands ---
+
+async def cmd_db_scan_history(args: argparse.Namespace) -> None:
+    from bba.scan_state import ScanState
+    db = await _get_db()
+    try:
+        state = ScanState(db)
+        await state.initialize()
+        cursor = await db._conn.execute(
+            "SELECT id, status, started_at, finished_at FROM scan_runs WHERE program = ? ORDER BY id DESC LIMIT 20",
+            (args.program,),
+        )
+        rows = await cursor.fetchall()
+        runs = [{"id": r[0], "status": r[1], "started_at": r[2], "finished_at": r[3]} for r in rows]
+        _output(runs)
+    finally:
+        await db.close()
+
+
+async def cmd_db_scan_status(args: argparse.Namespace) -> None:
+    from bba.scan_state import ScanState
+    db = await _get_db()
+    try:
+        state = ScanState(db)
+        await state.initialize()
+        cursor = await db._conn.execute(
+            "SELECT phase, status, error, started_at, finished_at FROM scan_phases WHERE run_id = ? ORDER BY id",
+            (args.run_id,),
+        )
+        rows = await cursor.fetchall()
+        phases = [{"phase": r[0], "status": r[1], "error": r[2], "started_at": r[3], "finished_at": r[4]} for r in rows]
+        _output(phases)
+    finally:
+        await db.close()
+
+
+async def cmd_db_scan_diff(args: argparse.Namespace) -> None:
+    from bba.scan_state import ScanState
+    db = await _get_db()
+    try:
+        state = ScanState(db)
+        await state.initialize()
+        diff = await state.diff_snapshots(args.old_run_id, args.new_run_id, args.category)
+        _output(diff)
+    finally:
+        await db.close()
+
+
+# --- Notify commands ---
+
+async def cmd_scan_notify(args: argparse.Namespace) -> None:
+    scope_cfg = _load_scope(args.program)
+    scope = ScopeValidator(scope_cfg)
+    runner = ToolRunner(scope=scope, rate_limiter=MultiTargetRateLimiter(),
+                        sanitizer=Sanitizer(), output_dir=OUTPUT_DIR)
+    db = await _get_db()
+    try:
+        from bba.tools.notify import NotifyTool
+        tool = NotifyTool(runner=runner, db=db, program=args.program)
+        result = await tool.send(args.message, provider_config=args.provider_config)
+        _output(result)
+    finally:
+        await db.close()
+
+
+async def cmd_scan_notify_findings(args: argparse.Namespace) -> None:
+    db = await _get_db()
+    try:
+        from bba.notifier import Notifier
+        notifier = Notifier(db=db, provider_config=args.provider_config)
+        await notifier.notify_findings(args.program, severity_threshold=args.severity)
+        _output({"sent": True, "program": args.program, "severity_threshold": args.severity})
+    finally:
+        await db.close()
+
+
+# --- Scope import commands ---
+
+async def cmd_scope_import_h1(args: argparse.Namespace) -> None:
+    import urllib.request
+    from bba.scope_importer import ScopeImporter
+
+    handle = args.handle
+    name = args.name or handle
+    url = f"https://hackerone.com/programs/{handle}/policy_scopes.json"
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        resp = urllib.request.urlopen(req, timeout=30)
+        data = json.loads(resp.read().decode())
+    except Exception as e:
+        _output({"error": f"Failed to fetch H1 scope: {e}"})
+        return
+
+    importer = ScopeImporter()
+    scope = importer.parse_hackerone(data, name)
+    output = Path(args.output) if args.output else PROGRAMS_DIR / f"{name}.yaml"
+    importer.save_yaml(scope, output)
+    _output({"saved": str(output), "in_scope_domains": len(scope["in_scope"]["domains"]),
+             "in_scope_cidrs": len(scope["in_scope"]["cidrs"]),
+             "out_of_scope": len(scope["out_of_scope"]["domains"])})
+
+
+async def cmd_scope_import_bc(args: argparse.Namespace) -> None:
+    import urllib.request
+    from bba.scope_importer import ScopeImporter
+
+    handle = args.handle
+    name = args.name or handle
+    url = f"https://bugcrowd.com/{handle}.json"
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        resp = urllib.request.urlopen(req, timeout=30)
+        data = json.loads(resp.read().decode())
+    except Exception as e:
+        _output({"error": f"Failed to fetch Bugcrowd scope: {e}"})
+        return
+
+    importer = ScopeImporter()
+    scope = importer.parse_bugcrowd(data, name)
+    output = Path(args.output) if args.output else PROGRAMS_DIR / f"{name}.yaml"
+    importer.save_yaml(scope, output)
+    _output({"saved": str(output), "in_scope_domains": len(scope["in_scope"]["domains"]),
+             "in_scope_cidrs": len(scope["in_scope"]["cidrs"]),
+             "out_of_scope": len(scope["out_of_scope"]["domains"])})
+
+
 # --- Wordlist commands ---
 
 def cmd_wordlist_download(args: argparse.Namespace) -> None:
@@ -1153,6 +1287,7 @@ async def cmd_report(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="bba", description="Bug Bounty Agent CLI")
+    parser.add_argument("--dry-run", action="store_true", help="Log commands without executing")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # --- recon ---
@@ -1477,6 +1612,18 @@ def build_parser() -> argparse.ArgumentParser:
     cs.add_argument("--program", required=True, help="Program name")
     cs.set_defaults(func=cmd_scan_cache_scanner)
 
+    ntf = scan_sub.add_parser("notify", help="Send notification via notify")
+    ntf.add_argument("message", help="Message to send")
+    ntf.add_argument("--provider-config", default=None, help="Path to notify provider config")
+    ntf.add_argument("--program", required=True, help="Program name")
+    ntf.set_defaults(func=cmd_scan_notify)
+
+    ntff = scan_sub.add_parser("notify-findings", help="Send notifications for new findings")
+    ntff.add_argument("--program", required=True, help="Program name")
+    ntff.add_argument("--severity", default="medium", choices=["critical", "high", "medium", "low", "info"])
+    ntff.add_argument("--provider-config", default=None)
+    ntff.set_defaults(func=cmd_scan_notify_findings)
+
     # --- db ---
     db = subparsers.add_parser("db", help="Database queries")
     db_sub = db.add_subparsers(dest="query", required=True)
@@ -1537,6 +1684,22 @@ def build_parser() -> argparse.ArgumentParser:
     db_ss.add_argument("--program", required=True, help="Program name")
     db_ss.set_defaults(func=cmd_db_screenshots)
 
+    db_sh = db_sub.add_parser("scan-history", help="List scan runs for a program")
+    db_sh.add_argument("--program", required=True, help="Program name")
+    db_sh.set_defaults(func=cmd_db_scan_history)
+
+    db_ss2 = db_sub.add_parser("scan-status", help="Show status of a scan run")
+    db_ss2.add_argument("run_id", type=int, help="Scan run ID")
+    db_ss2.add_argument("--program", required=True, help="Program name")
+    db_ss2.set_defaults(func=cmd_db_scan_status)
+
+    db_sd = db_sub.add_parser("scan-diff", help="Diff two scan runs")
+    db_sd.add_argument("old_run_id", type=int, help="Old scan run ID")
+    db_sd.add_argument("new_run_id", type=int, help="New scan run ID")
+    db_sd.add_argument("--category", default="subdomains", choices=["subdomains", "urls", "services", "findings"])
+    db_sd.add_argument("--program", required=True, help="Program name")
+    db_sd.set_defaults(func=cmd_db_scan_diff)
+
     # --- wordlist ---
     wl = subparsers.add_parser("wordlist", help="Wordlist management")
     wl_sub = wl.add_subparsers(dest="action", required=True)
@@ -1552,6 +1715,22 @@ def build_parser() -> argparse.ArgumentParser:
     rpt = subparsers.add_parser("report", help="Generate report")
     rpt.add_argument("--program", required=True, help="Program name")
     rpt.set_defaults(func=cmd_report)
+
+    # --- scope ---
+    scope_p = subparsers.add_parser("scope", help="Scope management")
+    scope_sub = scope_p.add_subparsers(dest="scope_cmd", required=True)
+
+    si_h1 = scope_sub.add_parser("import-h1", help="Import scope from HackerOne")
+    si_h1.add_argument("handle", help="HackerOne program handle")
+    si_h1.add_argument("--name", help="Program name (defaults to handle)")
+    si_h1.add_argument("--output", default=None, help="Output path")
+    si_h1.set_defaults(func=cmd_scope_import_h1)
+
+    si_bc = scope_sub.add_parser("import-bc", help="Import scope from Bugcrowd")
+    si_bc.add_argument("handle", help="Bugcrowd program handle")
+    si_bc.add_argument("--name", help="Program name (defaults to handle)")
+    si_bc.add_argument("--output", default=None, help="Output path")
+    si_bc.set_defaults(func=cmd_scope_import_bc)
 
     return parser
 
