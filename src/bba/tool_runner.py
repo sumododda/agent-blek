@@ -26,11 +26,13 @@ class ToolRunner:
         rate_limiter: MultiTargetRateLimiter,
         sanitizer: Sanitizer,
         output_dir: Path,
+        dry_run: bool = False,
     ):
         self.scope = scope
         self.rate_limiter = rate_limiter
         self.sanitizer = sanitizer
         self.output_dir = output_dir
+        self.dry_run = dry_run
 
     def validate_targets(self, targets: list[str]) -> None:
         for target in targets:
@@ -50,6 +52,14 @@ class ToolRunner:
         timeout: int = 600,
     ) -> ToolResult:
         self.validate_targets(targets)
+
+        if self.dry_run:
+            cmd_str = " ".join(str(c) for c in command)
+            return ToolResult(
+                success=True,
+                output=f"[DRY-RUN] Would execute: {cmd_str}",
+                duration=0.0,
+            )
 
         for target in targets:
             await self.rate_limiter.wait(target)
