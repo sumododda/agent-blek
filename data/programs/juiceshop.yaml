@@ -1,0 +1,11 @@
+program: juiceshop
+platform: local-testing
+in_scope:
+  domains:
+    - "localhost"
+    - "127.0.0.1"
+  cidrs:
+    - "127.0.0.0/8"
+out_of_scope:
+  domains: []
+  paths: []
