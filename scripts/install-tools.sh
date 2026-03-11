@@ -34,9 +34,12 @@ GO_TOOLS=(
   # Phase 5A — Infrastructure Hardening
   "github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest"
   "github.com/devploit/nomore403@latest"
+  # Phase 5B — Tool Cleanup + High-Value Additions
+  "github.com/BishopFox/jsluice/cmd/jsluice@latest"
+  "github.com/PentestPad/subzy@latest"
 )
 
-BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox amass dnsx naabu alterx shuffledns puredns gowitness hakrevdns cdncheck asnmap tlsx uncover crlfuzz nosqli interactsh-client nomore403)
+BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox amass dnsx naabu alterx shuffledns puredns gowitness hakrevdns cdncheck asnmap tlsx uncover crlfuzz nosqli interactsh-client nomore403 jsluice subzy)
 
 status() { printf "\033[1;34m[+]\033[0m %s\n" "$*"; }
 ok()     { printf "\033[1;32m[✓]\033[0m %s\n" "$*"; }
@@ -108,8 +111,8 @@ install_sqlmap() {
 # ---------- Python security tools ----------
 install_python_tools() {
   export PATH="$HOME/.local/bin:$PATH"
-  local PYTHON_TOOLS=(wafw00f paramspider arjun git-dumper waymore graphw00f s3scanner uro ghauri)
-  local PIP_NAMES=(wafw00f paramspider arjun git-dumper waymore graphw00f s3scanner uro ghauri)
+  local PYTHON_TOOLS=(wafw00f paramspider arjun git-dumper waymore graphw00f s3scanner uro ghauri clairvoyance cewler)
+  local PIP_NAMES=(wafw00f paramspider arjun git-dumper waymore graphw00f s3scanner uro ghauri clairvoyance cewler)
 
   for i in "${!PYTHON_TOOLS[@]}"; do
     local tool="${PYTHON_TOOLS[$i]}"
