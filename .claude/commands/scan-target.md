@@ -12,16 +12,16 @@ You are the COORDINATOR for a bug bounty engagement against `$ARGUMENTS.program`
 
 ## Phase 0: Precheck — Install Tools
 
-Before anything else, ensure all required security tools are installed. Run the install script and verify:
+Before anything else, ensure all required security tools are installed:
 
 ```bash
 bash scripts/install-tools.sh
 ```
 
-Then verify critical tools are on PATH:
+Verify critical tools:
 ```bash
-for tool in nuclei ffuf subfinder httpx katana gau dalfox sqlmap; do
-  printf "%-12s " "$tool"
+for tool in nuclei ffuf subfinder httpx katana gau dalfox sqlmap dnsx naabu feroxbuster crlfuzz qsreplace ghauri xsstrike; do
+  printf "%-15s " "$tool"
   which "$tool" 2>/dev/null || echo "MISSING"
 done
 ```
@@ -31,7 +31,7 @@ Also ensure the `bba` CLI works:
 uv run bba --help
 ```
 
-If any tools are missing after the install script, note which ones failed and continue — agents will fall back to curl-based testing for missing tools, but having the full toolkit produces better results.
+If any tools are missing after the install script, note which ones and continue — agents will adapt.
 
 **Do NOT proceed to Phase 1 until the precheck is complete.**
 
@@ -46,54 +46,130 @@ uv run bba db summary --program $ARGUMENTS.program
 
 ## Phase 2: Reconnaissance
 
-Dispatch the recon agent with the primary domain from the scope file:
+Dispatch the recon agent with the primary domain from the scope file. Pass instructions about which optional phases to run:
 
 > **Agent: recon**
 > Run full reconnaissance against [domain] for program $ARGUMENTS.program.
 > Use the `uv run bba` CLI for all tool invocations.
 > Program name: $ARGUMENTS.program
+> Optional phases: Run permutation (Phase 3) and DNS brute-force (Phase 4) only if the target has >5 live subdomains. Skip screenshots (Phase 9) for speed.
 
 ## Phase 3: Coordinator Reasoning — Post-Recon
 
-**STOP and THINK.** Before dispatching the scanner, analyze the recon results:
+**STOP and THINK.** Analyze the recon results:
 
 ```
 COORDINATOR REASONING:
-- Technology stack detected: [list]
+- Total subdomains discovered: [count]
+- Live HTTP services: [count]
+- Non-HTTP ports found: [count and details]
+- WAF detected: [yes/no, which WAF]
+- Technology stack: [list]
 - Architecture pattern: [what the recon suggests]
-- High-value targets identified: [list with reasoning]
-- Scan strategy decision: [what to prioritize and why]
+- High-value targets: [list with reasoning]
+
+STRATEGIC DECISIONS:
+- Run infrastructure scanning? [yes/no — yes if non-standard ports found]
+- Run OSINT? [yes/no — yes for real targets, skip for local testing]
+- Scan strategy: [what to prioritize and why]
 - Expected vulnerability classes: [based on tech stack]
+- Rate limiting: [adjust if WAF detected]
 ```
 
-Use this reasoning to craft specific context for the scanner agent.
+## Phase 4: Infrastructure Scanning (Conditional)
 
-## Phase 4: Vulnerability Scanning
+**Only if non-standard ports were found OR coordinator decides full coverage is needed.**
 
-Dispatch the scanner agent with targeted context from your reasoning:
+Dispatch the infrastructure agent:
+
+> **Agent: infrastructure**
+> Scan infrastructure for program $ARGUMENTS.program.
+> Resolved IPs/domains from recon: [list from DB]
+> Known infrastructure: [from recon analysis]
+> Use the `uv run bba` CLI for all tool invocations.
+
+## Phase 5: OSINT (Conditional)
+
+**Only for real targets (not local-testing). Skip for self-owned/local programs unless specifically requested.**
+
+Dispatch the OSINT agent:
+
+> **Agent: osint**
+> Hunt for leaked secrets and cloud misconfigurations for program $ARGUMENTS.program.
+> Organization name: [from scope]
+> Live URLs: [from recon/DB]
+> Use the `uv run bba` CLI for all tool invocations.
+
+## Phase 6: Coordinator Reasoning — Pre-Scan Strategy
+
+**STOP and THINK.** Combine all intelligence gathered:
+
+```
+COORDINATOR REASONING:
+- Infrastructure findings: [summary from infra agent, if run]
+- OSINT findings: [summary from OSINT agent, if run]
+- Combined attack surface: [HTTP services + non-HTTP services + OSINT]
+- Adjusted scan priorities: [based on all gathered intelligence]
+- WAF considerations: [rate limits, evasion strategy]
+```
+
+## Phase 7: Vulnerability Scanning
+
+Dispatch the scanner agent with ALL gathered context:
 
 > **Agent: scanner**
 > Scan program $ARGUMENTS.program with the following context:
-> - Technology profile: [from recon analysis]
-> - Priority targets: [from your reasoning]
+> - Technology profile: [from recon]
+> - Priority targets: [from reasoning]
+> - WAF status: [from recon — affects rate limiting]
+> - OSINT findings: [any exposed endpoints or secrets that inform scanning]
+> - Infrastructure findings: [any non-HTTP services to consider]
 > - Recommended focus areas: [from your reasoning]
 > Use the `uv run bba` CLI for all tool invocations.
 
-## Phase 5: Coordinator Reasoning — Post-Scan
+## Phase 8: Coordinator Reasoning — Post-Scan
 
-**STOP and THINK.** Analyze scan results and decide on deep dives:
+**STOP and THINK.** Analyze scan results and decide on vuln testing:
 
 ```
 COORDINATOR REASONING:
-- Total findings: [count]
-- Findings that need deep investigation: [list with reasoning]
-- False positive assessment: [which findings look suspicious]
+- Total findings: [count by severity]
+- URL classification summary: [from gf_patterns — how many URLs per category]
+- Categories warranting deep testing: [based on tech stack + URL classification]
+- Categories to skip: [with reasoning]
+- WAF considerations for vuln testing: [rate limits, evasion]
+```
+
+## Phase 8b: Category-Specific Vulnerability Testing
+
+Dispatch the vuln-tester agent with classified URLs and full context from prior phases:
+
+> **Agent: vuln-tester**
+> Run category-specific vulnerability testing for program $ARGUMENTS.program.
+> - Classified URLs from gf_patterns: [summary of categories and counts]
+> - Technology profile: [from recon]
+> - WAF status: [from recon]
+> - Scanner findings: [summary — what's already been found]
+> - Priority categories: [from your reasoning above]
+> Use the `uv run bba` CLI for all tool invocations.
+
+## Phase 8c: Coordinator Reasoning — Post-Vuln-Testing
+
+**STOP and THINK.** Analyze vuln-tester results:
+
+```
+COORDINATOR REASONING:
+- New findings from vuln testing: [count by severity]
+- Attack chains identified: [list any multi-step chains]
+- Categories that produced results: [which were productive]
+- Deep dive candidates from vuln testing: [findings needing manual investigation]
+- Combined finding count: [scanner + vuln-tester totals]
 - Deep dive decisions:
   1. [finding] → DEEP DIVE because [reason]
   2. [finding] → SKIP because [reason]
 ```
 
-## Phase 6: Deep Dives (Dynamic)
+## Phase 9: Deep Dives (Dynamic)
 
 For EACH finding that warrants investigation, spawn a deep dive agent:
 
@@ -106,7 +182,7 @@ For EACH finding that warrants investigation, spawn a deep dive agent:
 
 You may spawn multiple deep dive agents in parallel for independent targets.
 
-## Phase 7: Validation
+## Phase 10: Validation
 
 Dispatch the validator agent to re-test ALL findings:
 
@@ -116,17 +192,17 @@ Dispatch the validator agent to re-test ALL findings:
 > Apply security reasoning — don't just pattern match.
 > Use the `uv run bba` CLI for database queries and updates.
 
-## Phase 8: Coordinator Reasoning — Post-Validation
+## Phase 11: Coordinator Reasoning — Post-Validation
 
 ```
 COORDINATOR REASONING:
-- Validated findings: [count and summary]
-- False positives caught: [count]
+- Validated findings: [count by severity]
+- False positives caught by validator: [count]
 - Findings still needing review: [list]
-- Overall assessment: [risk level for the target]
+- Overall risk assessment: [critical/high/medium/low]
 ```
 
-## Phase 9: Reporting
+## Phase 12: Reporting
 
 Dispatch the reporter agent:
 
@@ -135,22 +211,32 @@ Dispatch the reporter agent:
 > Include all validated findings with risk analysis and remediation.
 > Write the report to data/output/reports/.
 
-## Phase 10: Executive Summary
+## Phase 13: Executive Summary
 
 Present the final summary to the user:
 
 ```
 ## Scan Complete: $ARGUMENTS.program
 
+### Pipeline Summary
+- Phases executed: [list which phases ran]
+- Agents dispatched: [count]
+- Total scan duration: [approximate]
+
 ### Results
 - Subdomains discovered: X
 - Live services: X
+- Open ports (non-HTTP): X
 - Total findings: X
 - Validated vulnerabilities: X
 - False positives filtered: X
+- Secrets discovered: X
 
 ### Critical/High Findings
 [List each with one-line description]
+
+### OSINT Findings
+[If OSINT ran: secrets, exposed repos, cloud buckets]
 
 ### Report
 [Path to generated report]
@@ -167,3 +253,5 @@ Present the final summary to the user:
 - Spawn deep dive agents ONLY for findings that warrant manual investigation
 - If recon finds zero live services, skip scanning and report the empty result
 - If any phase fails, note the failure and continue with available data
+- Infrastructure and OSINT phases are CONDITIONAL — only run when appropriate
+- Adjust rate limits if WAF is detected
