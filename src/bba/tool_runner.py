@@ -55,10 +55,11 @@ class ToolRunner:
             await self.rate_limiter.wait(target)
 
         tool_dir = self._ensure_output_dir(tool)
-        timestamp = int(time.time())
+        timestamp = time.monotonic_ns()
         raw_file = tool_dir / f"{timestamp}.txt"
 
         start = time.monotonic()
+        proc = None
         try:
             proc = await asyncio.create_subprocess_exec(
                 *command,
@@ -92,9 +93,53 @@ class ToolRunner:
                 )
 
         except asyncio.TimeoutError:
+            if proc and proc.returncode is None:
+                try:
+                    proc.kill()
+                    await proc.wait()
+                except ProcessLookupError:
+                    pass
             return ToolResult(
                 success=False,
                 output="",
                 error=f"Command timed out after {timeout}s",
                 duration=time.monotonic() - start,
+            )
+
+    async def run_http_request(
+        self,
+        tool: str,
+        url: str,
+        targets: list[str],
+        timeout: int = 30,
+        headers: dict[str, str] | None = None,
+    ) -> ToolResult:
+        """Execute an HTTP GET request with scope validation and rate limiting."""
+        self.validate_targets(targets)
+        for target in targets:
+            await self.rate_limiter.wait(target)
+
+        tool_dir = self._ensure_output_dir(tool)
+        timestamp = time.monotonic_ns()
+        raw_file = tool_dir / f"{timestamp}.txt"
+
+        start = time.monotonic()
+        try:
+            import ssl
+            import urllib.request
+
+            req = urllib.request.Request(url, headers=headers or {})
+            ctx = ssl.create_default_context()
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, lambda: urllib.request.urlopen(req, timeout=timeout, context=ctx)
+            )
+            raw_output = response.read().decode(errors="replace")
+            duration = time.monotonic() - start
+            raw_file.write_text(raw_output)
+            sanitized = self.sanitizer.sanitize(raw_output)
+            return ToolResult(success=True, output=sanitized, raw_file=raw_file, duration=duration)
+        except Exception as e:
+            return ToolResult(
+                success=False, output="", error=str(e), duration=time.monotonic() - start,
             )
