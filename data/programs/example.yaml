@@ -1,0 +1,16 @@
+program: example-corp
+platform: hackerone
+in_scope:
+  domains:
+    - "*.example.com"
+    - "example.com"
+    - "api.example.com"
+  cidrs:
+    - "192.168.1.0/24"
+out_of_scope:
+  domains:
+    - "admin.example.com"
+    - "*.staging.example.com"
+  paths:
+    - "/logout"
+    - "/account/delete"
