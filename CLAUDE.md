@@ -69,7 +69,7 @@ uv run bba recon getjs <targets> --program <prog>          # JS file extraction
 uv run bba recon gowitness <targets> --program <prog>
 
 # Scan — vulnerability scanning
-uv run bba scan nuclei <targets> --program <prog> [--severity] [--tags] [--rate-limit]
+uv run bba scan nuclei <targets> --program <prog> [--severity] [--tags] [--rate-limit] [--interactsh-url] [--interactsh-server] [--headless]
 uv run bba scan ffuf <url-with-FUZZ> --program <prog> [--wordlist]
 uv run bba scan feroxbuster <url> --program <prog> [--wordlist] [--depth 3]
 uv run bba scan sqlmap <url> --program <prog>
@@ -100,6 +100,11 @@ uv run bba scan corscanner <url> --program <prog>                   # CORS misco
 uv run bba scan jwt-tool <token> --program <prog> --domain <d> [--mode scan|crack] [--wordlist] # JWT attacks
 uv run bba scan smuggler <url> --program <prog>                     # HTTP request smuggling
 uv run bba scan ppfuzz <targets> --program <prog>                   # prototype pollution
+
+# Scan — OOB detection & bypass
+uv run bba scan interactsh-generate --program <prog> [--count 10] [--server url]  # generate OOB callback URLs
+uv run bba scan interactsh-poll <session-file> --program <prog> --domain <d>      # poll for OOB interactions
+uv run bba scan nomore403 <url> --program <prog>                                  # automated 403 bypass
 
 # Recon — pipeline utilities
 uv run bba recon uro <targets> --program <prog>                     # URL deduplication
