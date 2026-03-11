@@ -1,35 +1,32 @@
-"""Query string parameter value replacement for payload injection pipelines."""
+"""Query string parameter replacement — pure Python, no external dependency."""
 from __future__ import annotations
-from pathlib import Path
-from bba.db import Database
-from bba.tool_runner import ToolRunner
+
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 
 class QsreplaceTool:
-    """Replace all query string parameter values with a given payload."""
+    """Replace all query string parameter values with a given payload.
 
-    def __init__(self, runner: ToolRunner, db: Database, program: str):
-        self.runner = runner
-        self.db = db
-        self.program = program
+    Pure Python implementation — no subprocess, no shell, no external binary.
+    """
 
-    def build_command(self, urls: list[str], payload: str, work_dir: Path) -> list[str]:
-        input_file = work_dir / "qsreplace_input.txt"
-        input_file.write_text("\n".join(urls) + "\n")
-        return ["sh", "-c", f"cat {input_file} | qsreplace '{payload}'"]
+    def replace(self, url: str, payload: str) -> str | None:
+        """Replace all query param values in url with payload. Returns None if no params."""
+        parsed = urlparse(url)
+        if not parsed.query:
+            return None
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        replaced = {k: [payload] for k in params}
+        new_query = urlencode(replaced, doseq=True)
+        return urlunparse(parsed._replace(query=new_query))
 
-    def parse_output(self, output: str) -> list[str]:
-        return [line.strip() for line in output.strip().splitlines() if line.strip()]
-
-    async def run(self, urls: list[str], payload: str, work_dir: Path) -> dict:
-        if not urls:
-            return {"total": 0, "urls": [], "payload": payload}
-        domains = list({u.split("/")[2] for u in urls if "://" in u})
-        result = await self.runner.run_command(
-            tool="qsreplace", command=self.build_command(urls, payload, work_dir),
-            targets=domains or ["unknown"], timeout=60,
-        )
-        if not result.success:
-            return {"total": 0, "urls": [], "payload": payload, "error": result.error}
-        replaced = self.parse_output(result.output)
-        return {"total": len(replaced), "urls": replaced, "payload": payload}
+    def batch_replace(self, urls: list[str], payload: str) -> list[str]:
+        """Replace params in all URLs, deduplicate results."""
+        seen: set[str] = set()
+        results: list[str] = []
+        for url in urls:
+            replaced = self.replace(url, payload)
+            if replaced and replaced not in seen:
+                seen.add(replaced)
+                results.append(replaced)
+        return results
