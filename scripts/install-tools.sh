@@ -37,9 +37,11 @@ GO_TOOLS=(
   # Phase 5B — Tool Cleanup + High-Value Additions
   "github.com/BishopFox/jsluice/cmd/jsluice@latest"
   "github.com/PentestPad/subzy@latest"
+  # Phase 5C — Monitoring & Platform Integration
+  "github.com/projectdiscovery/notify/cmd/notify@latest"
 )
 
-BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox amass dnsx naabu alterx shuffledns puredns gowitness hakrevdns cdncheck asnmap tlsx uncover crlfuzz nosqli interactsh-client nomore403 jsluice subzy)
+BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox amass dnsx naabu alterx shuffledns puredns gowitness hakrevdns cdncheck asnmap tlsx uncover crlfuzz nosqli interactsh-client nomore403 jsluice subzy notify)
 
 status() { printf "\033[1;34m[+]\033[0m %s\n" "$*"; }
 ok()     { printf "\033[1;32m[✓]\033[0m %s\n" "$*"; }
