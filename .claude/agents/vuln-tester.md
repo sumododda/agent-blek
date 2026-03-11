@@ -89,7 +89,7 @@ uv run bba scan crlfuzz "<url>" --program <prog>
 
 **Advanced techniques (agent reasoning, not tool automation):**
 - Check error pages (404/500) for reflected input — curl with XSS payload in path
-- Look for JSONP endpoints in JS files (from linkfinder) — callback parameter injection
+- Look for JSONP endpoints in JS files (from jsluice) — callback parameter injection
 - Check CSP headers — if `unsafe-inline` or missing, XSS impact increases
 - DOM XSS — analyze JS files for `innerHTML`, `document.write`, `eval` sinks
 
@@ -200,11 +200,11 @@ uv run bba scan crlfuzz "<url-or-targets>" --program <prog>
 ### CORS Misconfiguration Pipeline
 
 **When:** API endpoints found OR cors-classified URLs exist
-**Tools:** corscanner
+**Tools:** nuclei with cors tags
 **Priority:** HIGH if credentials-based, MEDIUM otherwise
 
 ```bash
-uv run bba scan corscanner "<url>" --program <prog>
+uv run bba scan nuclei <targets_file> --program <prog> --tags cors
 ```
 
 **Critical condition:** `Access-Control-Allow-Credentials: true` + reflected arbitrary Origin = P1 finding.
@@ -237,11 +237,11 @@ uv run bba scan jwt-tool "<token>" --program <prog> --domain <domain> --mode cra
 ### HTTP Smuggling Pipeline
 
 **When:** Target uses reverse proxy (CloudFront, Akamai, Fastly, nginx) OR multiple backend servers
-**Tools:** smuggler
+**Tools:** nuclei with http-smuggling tags
 **Priority:** CRITICAL — can bypass security controls entirely
 
 ```bash
-uv run bba scan smuggler "<url>" --program <prog>
+uv run bba scan nuclei <targets_file> --program <prog> --tags http-smuggling
 ```
 
 **Prioritize:** Targets behind CDN/load balancers detected by cdncheck/wafw00f.

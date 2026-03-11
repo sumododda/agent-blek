@@ -34,10 +34,10 @@ Based on the technology profile and WAF presence, decide your approach using thi
 
 **Target-type strategies:**
 
-- **API target** → kiterunner for route discovery + arjun for parameter discovery + nuclei with api tags
+- **API target** → arjun for parameter discovery + ffuf with API wordlists + nuclei with api tags
 - **WordPress** → nuclei with wordpress tags + feroxbuster with wp-specific wordlist (`/usr/share/wordlists/dirb/wp.txt` or similar)
 - **Exposed Swagger/OpenAPI** → test all documented endpoints, check auth bypass on each, test for BOLA/IDOR
-- **JS-heavy SPA** → JS analysis pipeline (linkfinder + secretfinder on all JS files)
+- **JS-heavy SPA** → JS analysis pipeline (jsluice on all JS files for URLs + secrets)
 - **WAF protected** → lower rate limits (10-20 req/s), focus on logic bugs over injection, avoid noisy payloads, use evasion-friendly nuclei tags
 - **Generic webapp** → nuclei high,critical + feroxbuster for directory discovery + parameter discovery
 - **All targets** → nuclei-cve + nuclei-panels + security-headers + subdomain takeover check (always run)
@@ -81,8 +81,8 @@ uv run bba scan ffuf <url>/FUZZ --program <program> --wordlist <path>
 Run on any target that looks like it serves an API (detected from recon tech profile, URL patterns like /api/, /v1/, /graphql, etc.).
 
 ```bash
-# Discover API routes using kiterunner
-uv run bba scan kiterunner <url> --program <program>
+# Discover API routes using ffuf with API wordlists
+uv run bba scan ffuf <url>/FUZZ --program <program> --wordlist /path/to/api-wordlist.txt
 
 # Active parameter discovery on interesting endpoints
 uv run bba scan arjun <url> --program <program>
@@ -115,10 +115,10 @@ uv run bba db urls --program <program> --filter "*.js"
 For each discovered JS file:
 ```bash
 # Step 5b: Extract endpoints and paths from JS files
-uv run bba scan linkfinder <js_url> --program <program>
+uv run bba scan jsluice-urls <js_url> --program <program>
 
 # Step 5c: Search for hardcoded secrets, API keys, tokens
-uv run bba scan secretfinder <js_url> --program <program>
+uv run bba scan jsluice-secrets <js_url> --program <program>
 ```
 
 After JS analysis:
@@ -154,8 +154,8 @@ When to use: Run on ALL discovered subdomains (not just live ones — dead subdo
 # Nuclei-based takeover detection
 uv run bba scan nuclei-takeover <all_subdomains_file> --program <program>
 
-# Subjack for additional coverage
-uv run bba scan subjack <all_subdomains_file> --program <program>
+# Subzy for additional coverage
+uv run bba scan subzy <all_subdomains_file> --program <program>
 ```
 
 #### Exposed Panels & Misconfigurations
@@ -263,7 +263,7 @@ For EACH finding, apply security reasoning:
 - Endpoints fed back into scanning: X additional targets
 
 ## API ROUTES DISCOVERED
-- Routes found via kiterunner: X
+- Routes found via ffuf API fuzzing: X
 - Notable API endpoints:
   - [METHOD] [route] — [status code] — [notes]
 - Auth-required endpoints: X

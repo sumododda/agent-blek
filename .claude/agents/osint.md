@@ -56,7 +56,7 @@ uv run bba recon gitleaks <path_to_dumped_repo> --program <program>
 
 Test for misconfigured cloud buckets using the organization/domain name:
 ```bash
-uv run bba recon cloud-enum <keyword> --program <program>
+uv run bba scan s3scanner <keyword> --program <program>
 ```
 
 Try variations: company name, domain name without TLD, common patterns (backup, assets, media, dev).
