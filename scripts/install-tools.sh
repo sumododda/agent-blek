@@ -28,8 +28,6 @@ GO_TOOLS=(
   "github.com/projectdiscovery/asnmap/cmd/asnmap@latest"
   "github.com/projectdiscovery/tlsx/cmd/tlsx@latest"
   "github.com/projectdiscovery/uncover/cmd/uncover@latest"
-  "github.com/003random/getJS@latest"
-  "github.com/haccer/subjack@latest"
   # Phase 4 — Vulnerability Testing Tools
   "github.com/dwisiswant0/crlfuzz/cmd/crlfuzz@latest"
   "github.com/tomnomnom/qsreplace@latest"
@@ -39,7 +37,7 @@ GO_TOOLS=(
   "github.com/devploit/nomore403@latest"
 )
 
-BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox amass dnsx naabu alterx shuffledns puredns gowitness hakrevdns cdncheck asnmap tlsx uncover getJS subjack crlfuzz qsreplace nosqli interactsh-client nomore403)
+BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox amass dnsx naabu alterx shuffledns puredns gowitness hakrevdns cdncheck asnmap tlsx uncover crlfuzz qsreplace nosqli interactsh-client nomore403)
 
 status() { printf "\033[1;34m[+]\033[0m %s\n" "$*"; }
 ok()     { printf "\033[1;32m[✓]\033[0m %s\n" "$*"; }
@@ -111,8 +109,8 @@ install_sqlmap() {
 # ---------- Python security tools ----------
 install_python_tools() {
   export PATH="$HOME/.local/bin:$PATH"
-  local PYTHON_TOOLS=(wafw00f paramspider arjun linkfinder SecretFinder git-dumper cloud_enum waymore graphw00f s3scanner uro ghauri)
-  local PIP_NAMES=(wafw00f paramspider arjun linkfinder SecretFinder git-dumper cloud_enum waymore graphw00f s3scanner uro ghauri)
+  local PYTHON_TOOLS=(wafw00f paramspider arjun git-dumper waymore graphw00f s3scanner uro ghauri)
+  local PIP_NAMES=(wafw00f paramspider arjun git-dumper waymore graphw00f s3scanner uro ghauri)
 
   for i in "${!PYTHON_TOOLS[@]}"; do
     local tool="${PYTHON_TOOLS[$i]}"
@@ -209,9 +207,7 @@ install_binary_tools() {
     "https://github.com/vladko312/SSTImap.git:/opt/sstimap:sstimap"
     "https://github.com/commixproject/commix.git:/opt/commix:commix"
     "https://github.com/s0md3v/XSStrike.git:/opt/xsstrike:xsstrike"
-    "https://github.com/chenjj/CORScanner.git:/opt/corscanner:corscanner"
     "https://github.com/ticarpi/jwt_tool.git:/opt/jwt_tool:jwt_tool"
-    "https://github.com/defparam/smuggler.git:/opt/smuggler:smuggler"
   )
   for entry in "${GIT_TOOLS[@]}"; do
     local repo="${entry%%:*}"

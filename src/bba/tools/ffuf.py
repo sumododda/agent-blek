@@ -7,6 +7,58 @@ from bba.tool_runner import ToolRunner
 
 INTERESTING_PATHS = {".env", "backup", ".git", "config", "debug", "phpinfo", "server-status", "wp-config"}
 
+class FfufVhostTool:
+    """Virtual host fuzzing mode — discovers hidden vhosts via Host header."""
+
+    def __init__(self, runner: ToolRunner, db: Database, program: str):
+        self.runner = runner
+        self.db = db
+        self.program = program
+
+    def build_command(self, target_url: str, wordlist: str, domain: str) -> list[str]:
+        return [
+            "ffuf", "-u", target_url,
+            "-H", f"Host: FUZZ.{domain}",
+            "-w", wordlist, "-json", "-s",
+            "-fc", "404", "-noninteractive", "-ac",
+        ]
+
+    def parse_output(self, output: str) -> list[dict]:
+        results = []
+        for line in output.strip().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+                if "results" in data:
+                    results.extend(data["results"])
+                elif "url" in data or "input" in data:
+                    results.append(data)
+            except json.JSONDecodeError:
+                continue
+        return results
+
+    async def run(self, target_url: str, wordlist: str, domain: str) -> dict:
+        parsed = urlparse(target_url)
+        host = parsed.hostname or domain
+        result = await self.runner.run_command(
+            tool="ffuf-vhost",
+            command=self.build_command(target_url, wordlist, domain),
+            targets=[host],
+        )
+        if not result.success:
+            return {"total": 0, "vhosts": [], "error": result.error}
+        entries = self.parse_output(result.output)
+        vhosts = []
+        for entry in entries:
+            fuzz = entry.get("input", {}).get("FUZZ", "")
+            vhost = f"{fuzz}.{domain}"
+            vhosts.append(vhost)
+            await self.db.add_subdomain(self.program, vhost, "ffuf-vhost")
+        return {"total": len(vhosts), "vhosts": vhosts}
+
+
 class FfufTool:
     def __init__(self, runner: ToolRunner, db: Database, program: str):
         self.runner = runner
