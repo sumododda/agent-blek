@@ -9,29 +9,82 @@ You are an autonomous bug bounty agent. Your primary directive is to find valid,
 3. **Rate limit all requests** according to target configuration.
 4. **Log every action** to the audit log via the database.
 
-## Workflow
+## Architecture
 
-1. Load target scope from `data/programs/<name>.yaml`
-2. Run recon sub-agent to enumerate attack surface
-3. Analyze recon results and plan scanning strategy
-4. Run scanner sub-agent on prioritized targets
-5. Run validator sub-agent on all findings
-6. Present validated findings with evidence
+The system uses Claude Code agents as intelligent orchestrators. Python tool wrappers are dumb instruments — agents invoke them via the `bba` CLI and reason about the output.
 
-## Running Tools
+```
+/scan-target <program>
+  → Coordinator (scan-target.md, runs as Opus)
+    ├─ Recon Agent (haiku) — enumerates attack surface, provides strategic analysis
+    ├─ Scanner Agent (sonnet) — selects strategy based on tech profile, filters false positives
+    ├─ Deep Dive Agent (opus) — manually investigates promising findings with curl
+    ├─ Validator Agent (opus) — re-tests findings with security reasoning
+    └─ Reporter Agent (sonnet) — generates professional reports
+```
 
-Use the Python tool wrappers in `src/bba/` — they enforce scope, rate limits, and sanitization automatically.
+The coordinator REASONS between phases — explicit thinking about what was found and what to do next. Deep dive agents are spawned dynamically when interesting findings need manual investigation.
 
-For direct tool usage: `uv run python -m bba.tool_runner`
+## BBA CLI
+
+Agents invoke security tools via the `bba` CLI, which handles scope validation, rate limiting, sanitization, and database storage.
+
+**IMPORTANT:** Always invoke as `uv run bba` (not bare `bba`), since the command is installed in the project venv.
+
+```bash
+# Recon tools
+uv run bba recon subfinder <domain> --program <prog>
+uv run bba recon httpx <targets> --program <prog>
+uv run bba recon katana <targets> --program <prog>
+uv run bba recon gau <domain> --program <prog>
+
+# Scan tools
+uv run bba scan nuclei <targets> --program <prog> [--severity] [--tags] [--rate-limit]
+uv run bba scan ffuf <url-with-FUZZ> --program <prog> [--wordlist]
+uv run bba scan sqlmap <url> --program <prog>
+uv run bba scan dalfox <url> --program <prog>
+
+# Database queries
+uv run bba db subdomains --program <prog>
+uv run bba db services --program <prog>
+uv run bba db findings --program <prog> [--severity] [--status]
+uv run bba db summary --program <prog>
+uv run bba db add-finding --program <prog> --domain <d> --url <u> --vuln-type <t> --severity-level <s> --tool <t> --evidence <e> [--confidence <c>]
+uv run bba db update-finding <id> --status <validated|false_positive|needs_review>
+
+# Reporting
+uv run bba report --program <prog>
+```
+
+All commands output JSON to stdout.
 
 ## Database
 
-SQLite at `data/db/findings.db`. Query with: `sqlite3 data/db/findings.db "<SQL>"`
+SQLite at `data/db/findings.db`. Tables: subdomains, services, findings, audit_log.
+
+Query via CLI: `bba db ...` or directly: `sqlite3 data/db/findings.db "<SQL>"`
 
 ## Project Layout
 
+- `src/bba/cli.py` — CLI entry point for agent tool invocation
 - `src/bba/` — Core library (scope, db, rate limiter, sanitizer, tool runner)
+- `src/bba/tools/` — Individual tool wrappers (subfinder, httpx, nuclei, etc.)
 - `data/programs/` — Scope YAML files per target program
 - `data/output/` — Raw tool output (timestamped)
-- `docker/` — Security tools container
-- `.claude/agents/` — Sub-agent definitions
+- `data/db/` — SQLite database
+- `.claude/agents/` — Agent definitions (recon, scanner, deep-dive, validator, reporter)
+- `.claude/commands/` — User-facing commands (scan-target)
+- `tests/` — Unit tests
+
+## Running
+
+```bash
+# Install CLI
+uv pip install -e ".[dev]"
+
+# Run full scan
+/scan-target <program>
+
+# Run tests
+uv run pytest tests/ --ignore=tests/integration -v
+```

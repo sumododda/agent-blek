@@ -34,7 +34,7 @@ class TestNucleiTool:
     def test_builds_command_with_targets_file(self, runner, db, tmp_path):
         tool = NucleiTool(runner=runner, db=db, program="test-corp")
         cmd = tool.build_command(["https://api.example.com", "https://shop.example.com"], work_dir=tmp_path, severity="high,critical", rate_limit=100)
-        assert "nuclei" in cmd and "-l" in cmd and "-severity" in cmd and "high,critical" in cmd and "-rl" in cmd and "100" in cmd and "-json" in cmd
+        assert "nuclei" in cmd and "-l" in cmd and "-severity" in cmd and "high,critical" in cmd and "-rl" in cmd and "100" in cmd and "-jsonl" in cmd
 
     def test_builds_command_with_tags(self, runner, db, tmp_path):
         tool = NucleiTool(runner=runner, db=db, program="test-corp")

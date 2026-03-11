@@ -14,7 +14,7 @@ class ValidationResult:
 _VULN_INDICATORS = {
     "xss": ["<script", "alert(", "onerror=", "<svg", "onload=", "javascript:"],
     "sql-injection": ["sql error", "mysql", "syntax error", "unclosed quotation", "ORA-", "postgresql"],
-    "directory-exposure": [".env", "DB_PASSWORD", "APP_KEY", "SECRET_KEY"],
+    "directory-exposure": [".env", "DB_PASSWORD", "APP_KEY", "SECRET_KEY", "index of /", "directory listing", '"status":', '"data":', "application/json"],
 }
 
 class FindingValidator:

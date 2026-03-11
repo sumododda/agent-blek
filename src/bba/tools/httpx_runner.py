@@ -14,7 +14,7 @@ class HttpxTool:
     def build_command(self, domains: list[str], work_dir: Path) -> list[str]:
         input_file = work_dir / "httpx_input.txt"
         input_file.write_text("\n".join(domains) + "\n")
-        return ["httpx", "-l", str(input_file), "-silent", "-json"]
+        return ["httpx", "-l", str(input_file), "-silent", "-json", "-nc"]
 
     def parse_output(self, output: str) -> list[dict]:
         results = []

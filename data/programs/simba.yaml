@@ -1,0 +1,12 @@
+program: simba
+platform: self-owned
+in_scope:
+  domains:
+    - "simba.blekcipher.com"
+    - "*.simba.blekcipher.com"
+    - "blekcipher.com"
+    - "*.blekcipher.com"
+  cidrs: []
+out_of_scope:
+  domains: []
+  paths: []

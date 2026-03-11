@@ -21,7 +21,7 @@ class NucleiTool:
     def build_command(self, targets: list[str], work_dir: Path, severity: str = "high,critical", rate_limit: int = 100, tags: str | None = None) -> list[str]:
         input_file = work_dir / "nuclei_targets.txt"
         input_file.write_text("\n".join(targets) + "\n")
-        cmd = ["nuclei", "-l", str(input_file), "-json", "-silent"]
+        cmd = ["nuclei", "-l", str(input_file), "-jsonl", "-silent", "-nc"]
         if severity:
             cmd.extend(["-severity", severity])
         if rate_limit:
