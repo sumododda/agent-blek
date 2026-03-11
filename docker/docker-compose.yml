@@ -1,0 +1,18 @@
+services:
+  tools:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../data/output:/home/scanner/output
+    network_mode: host
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW  # Required for nmap/naabu
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/scanner/.config
