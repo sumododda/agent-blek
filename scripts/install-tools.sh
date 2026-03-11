@@ -16,9 +16,27 @@ GO_TOOLS=(
   "github.com/projectdiscovery/katana/cmd/katana@latest"
   "github.com/lc/gau/v2/cmd/gau@latest"
   "github.com/hahwul/dalfox/v2@latest"
+  "github.com/owasp-amass/amass/v4/...@master"
+  "github.com/projectdiscovery/dnsx/cmd/dnsx@latest"
+  "github.com/projectdiscovery/naabu/v2/cmd/naabu@latest"
+  "github.com/projectdiscovery/alterx/cmd/alterx@latest"
+  "github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest"
+  "github.com/d3mondev/puredns/v2@latest"
+  "github.com/sensepost/gowitness@latest"
+  "github.com/hakluke/hakrevdns@latest"
+  "github.com/projectdiscovery/cdncheck/cmd/cdncheck@latest"
+  "github.com/projectdiscovery/asnmap/cmd/asnmap@latest"
+  "github.com/projectdiscovery/tlsx/cmd/tlsx@latest"
+  "github.com/projectdiscovery/uncover/cmd/uncover@latest"
+  "github.com/003random/getJS@latest"
+  "github.com/haccer/subjack@latest"
+  # Phase 4 — Vulnerability Testing Tools
+  "github.com/dwisiswant0/crlfuzz/cmd/crlfuzz@latest"
+  "github.com/tomnomnom/qsreplace@latest"
+  "github.com/Charlie-belmer/nosqli@latest"
 )
 
-BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox)
+BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox amass dnsx naabu alterx shuffledns puredns gowitness hakrevdns cdncheck asnmap tlsx uncover getJS subjack crlfuzz qsreplace nosqli)
 
 status() { printf "\033[1;34m[+]\033[0m %s\n" "$*"; }
 ok()     { printf "\033[1;32m[✓]\033[0m %s\n" "$*"; }
@@ -87,6 +105,151 @@ install_sqlmap() {
   fi
 }
 
+# ---------- Python security tools ----------
+install_python_tools() {
+  export PATH="$HOME/.local/bin:$PATH"
+  local PYTHON_TOOLS=(wafw00f paramspider arjun linkfinder SecretFinder git-dumper cloud_enum waymore graphw00f s3scanner uro ghauri)
+  local PIP_NAMES=(wafw00f paramspider arjun linkfinder SecretFinder git-dumper cloud_enum waymore graphw00f s3scanner uro ghauri)
+
+  for i in "${!PYTHON_TOOLS[@]}"; do
+    local tool="${PYTHON_TOOLS[$i]}"
+    local name="${PIP_NAMES[$i]}"
+    if command -v "$name" &>/dev/null || pip3 show "$tool" &>/dev/null 2>&1; then
+      ok "$tool already installed"
+    else
+      status "Installing $tool..."
+      if command -v pipx &>/dev/null; then
+        pipx install "$tool" 2>&1 && ok "$tool installed" || warn "$tool installation failed (non-critical)"
+      else
+        pip3 install --user "$tool" 2>&1 && ok "$tool installed" || warn "$tool installation failed (non-critical)"
+      fi
+    fi
+  done
+}
+
+# ---------- Binary tools (GitHub releases) ----------
+install_binary_tools() {
+  export PATH="$HOME/.local/bin:$PATH"
+  local BIN_DIR="$HOME/.local/bin"
+  mkdir -p "$BIN_DIR"
+
+  # feroxbuster
+  if command -v feroxbuster &>/dev/null; then
+    ok "feroxbuster already installed"
+  else
+    status "Installing feroxbuster..."
+    local arch
+    arch=$(dpkg --print-architecture 2>/dev/null || uname -m)
+    case "$arch" in
+      amd64|x86_64) arch="x86_64" ;;
+      arm64|aarch64) arch="aarch64" ;;
+    esac
+    local url="https://github.com/epi052/feroxbuster/releases/latest/download/feroxbuster_linux_${arch}.tar.gz"
+    if curl -fsSL "$url" | tar xz -C "$BIN_DIR" feroxbuster 2>/dev/null; then
+      chmod +x "$BIN_DIR/feroxbuster"
+      ok "feroxbuster installed"
+    else
+      warn "feroxbuster installation failed (non-critical)"
+    fi
+  fi
+
+  # trufflehog
+  if command -v trufflehog &>/dev/null; then
+    ok "trufflehog already installed"
+  else
+    status "Installing trufflehog..."
+    curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b "$BIN_DIR" 2>&1 && ok "trufflehog installed" || warn "trufflehog installation failed"
+  fi
+
+  # gitleaks
+  if command -v gitleaks &>/dev/null; then
+    ok "gitleaks already installed"
+  else
+    status "Installing gitleaks..."
+    go install github.com/gitleaks/gitleaks/v8@latest 2>&1 && ok "gitleaks installed" || warn "gitleaks installation failed"
+  fi
+
+  # kiterunner
+  if command -v kr &>/dev/null; then
+    ok "kiterunner already installed"
+  else
+    status "Installing kiterunner..."
+    go install github.com/assetnote/kiterunner/cmd/kr@latest 2>&1 && ok "kiterunner installed" || warn "kiterunner installation failed"
+  fi
+
+  # brutespray
+  if command -v brutespray &>/dev/null; then
+    ok "brutespray already installed"
+  else
+    status "Installing brutespray..."
+    if command -v pipx &>/dev/null; then
+      pipx install brutespray 2>&1 && ok "brutespray installed" || warn "brutespray installation failed (non-critical)"
+    else
+      pip3 install --user brutespray 2>&1 && ok "brutespray installed" || warn "brutespray installation failed (non-critical)"
+    fi
+  fi
+
+  # retire.js
+  if command -v retire &>/dev/null; then
+    ok "retire.js already installed"
+  else
+    status "Installing retire.js..."
+    if command -v npm &>/dev/null; then
+      npm install -g retire 2>&1 && ok "retire.js installed" || warn "retire.js installation failed (non-critical)"
+    else
+      warn "retire.js requires npm — install Node.js first"
+    fi
+  fi
+
+  # Phase 4 — git-based Python tools
+  local GIT_TOOLS=(
+    "https://github.com/vladko312/SSTImap.git:/opt/sstimap:sstimap"
+    "https://github.com/commixproject/commix.git:/opt/commix:commix"
+    "https://github.com/s0md3v/XSStrike.git:/opt/xsstrike:xsstrike"
+    "https://github.com/chenjj/CORScanner.git:/opt/corscanner:corscanner"
+    "https://github.com/ticarpi/jwt_tool.git:/opt/jwt_tool:jwt_tool"
+    "https://github.com/defparam/smuggler.git:/opt/smuggler:smuggler"
+  )
+  for entry in "${GIT_TOOLS[@]}"; do
+    local repo="${entry%%:*}"
+    local rest="${entry#*:}"
+    local dest="${rest%%:*}"
+    local name="${rest##*:}"
+    if [ -d "$dest" ]; then
+      ok "$name already cloned at $dest"
+    else
+      status "Cloning $name..."
+      git clone "$repo" "$dest" 2>/dev/null && ok "$name cloned" || warn "$name clone failed (non-critical)"
+    fi
+  done
+
+  # Phase 4 — ppfuzz (Rust/cargo)
+  if command -v ppfuzz &>/dev/null; then
+    ok "ppfuzz already installed"
+  else
+    status "Installing ppfuzz via cargo..."
+    if command -v cargo &>/dev/null; then
+      cargo install ppfuzz 2>/dev/null && ok "ppfuzz installed" || warn "ppfuzz installation failed (non-critical)"
+    else
+      warn "ppfuzz requires cargo (Rust) — install Rust first: https://rustup.rs"
+    fi
+  fi
+}
+
+# ---------- System tools (require manual install) ----------
+check_system_tools() {
+  local SYSTEM_TOOLS=(nmap masscan)
+  echo ""
+  status "System tools (may require sudo to install):"
+  for tool in "${SYSTEM_TOOLS[@]}"; do
+    if command -v "$tool" &>/dev/null; then
+      ok "$tool: $(which "$tool")"
+    else
+      warn "$tool: NOT FOUND — install with: sudo apt install $tool"
+    fi
+  done
+}
+
 # ---------- bba CLI ----------
 install_bba() {
   if uv run bba --help &>/dev/null 2>&1; then
@@ -106,6 +269,9 @@ main() {
   install_go
   install_go_tools
   install_sqlmap
+  install_python_tools
+  install_binary_tools
+  check_system_tools
   install_bba
 
   # Final PATH for verification
@@ -114,7 +280,7 @@ main() {
   echo ""
   status "Installation summary:"
   local all_ok=true
-  for name in "${BIN_NAMES[@]}" sqlmap; do
+  for name in "${BIN_NAMES[@]}" sqlmap feroxbuster trufflehog gitleaks kr brutespray retire; do
     if command -v "$name" &>/dev/null; then
       ok "$name: $(which "$name")"
     else
