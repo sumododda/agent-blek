@@ -18,7 +18,7 @@ class NucleiTool:
         self.db = db
         self.program = program
 
-    def build_command(self, targets: list[str], work_dir: Path, severity: str = "high,critical", rate_limit: int = 100, tags: str | None = None) -> list[str]:
+    def build_command(self, targets: list[str], work_dir: Path, severity: str = "high,critical", rate_limit: int = 100, tags: str | None = None, templates: list[str] | None = None, dast: bool = False, concurrency: int | None = None, interactsh_url: str | None = None, interactsh_server: str | None = None, headless: bool = False) -> list[str]:
         input_file = work_dir / "nuclei_targets.txt"
         input_file.write_text("\n".join(targets) + "\n")
         cmd = ["nuclei", "-l", str(input_file), "-jsonl", "-silent", "-nc"]
@@ -28,6 +28,19 @@ class NucleiTool:
             cmd.extend(["-rl", str(rate_limit)])
         if tags:
             cmd.extend(["-tags", tags])
+        if templates:
+            for tmpl in templates:
+                cmd.extend(["-t", tmpl])
+        if dast:
+            cmd.append("-dast")
+        if concurrency:
+            cmd.extend(["-c", str(concurrency)])
+        if interactsh_url:
+            cmd.extend(["-iurl", interactsh_url])
+        if interactsh_server:
+            cmd.extend(["-iserver", interactsh_server])
+        if headless:
+            cmd.append("-headless")
         return cmd
 
     def parse_output(self, output: str) -> list[dict]:
@@ -50,12 +63,12 @@ class NucleiTool:
                 tags.append(TECH_TAG_MAP[tech_lower])
         return {"severity": "high,critical", "tags": ",".join(tags) if tags else None}
 
-    async def run(self, targets: list[str], work_dir: Path, severity: str = "high,critical", rate_limit: int = 100, tags: str | None = None) -> dict:
+    async def run(self, targets: list[str], work_dir: Path, severity: str = "high,critical", rate_limit: int = 100, tags: str | None = None, templates: list[str] | None = None, dast: bool = False, concurrency: int | None = None, interactsh_url: str | None = None, interactsh_server: str | None = None, headless: bool = False) -> dict:
         domains = []
         for t in targets:
             parsed = urlparse(t)
             domains.append(parsed.hostname if parsed.hostname else t)
-        result = await self.runner.run_command(tool="nuclei", command=self.build_command(targets, work_dir, severity, rate_limit, tags), targets=domains)
+        result = await self.runner.run_command(tool="nuclei", command=self.build_command(targets, work_dir, severity, rate_limit, tags, templates, dast, concurrency, interactsh_url, interactsh_server, headless), targets=domains)
         if not result.success:
             return {"total": 0, "findings": [], "by_severity": {}, "error": result.error}
         entries = self.parse_output(result.output)
