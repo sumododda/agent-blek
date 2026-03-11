@@ -911,22 +911,14 @@ async def cmd_recon_uro(args: argparse.Namespace) -> None:
 
 
 async def cmd_recon_qsreplace(args: argparse.Namespace) -> None:
-    scope = _load_scope(args.program)
-    runner = _make_runner(scope)
-    db = await _get_db()
-    try:
-        from bba.tools.qsreplace import QsreplaceTool
-        if Path(args.targets).is_file():
-            targets = Path(args.targets).read_text().strip().splitlines()
-        else:
-            targets = [t.strip() for t in args.targets.split(",") if t.strip()]
-        tool = QsreplaceTool(runner=runner, db=db, program=args.program)
-        work_dir = Path(f"data/output/qsreplace")
-        work_dir.mkdir(parents=True, exist_ok=True)
-        result = await tool.run(targets, args.payload, work_dir)
-        _output(result)
-    finally:
-        await db.close()
+    from bba.tools.qsreplace import QsreplaceTool
+    tool = QsreplaceTool()
+    if Path(args.targets).is_file():
+        urls = Path(args.targets).read_text().strip().splitlines()
+    else:
+        urls = [t.strip() for t in args.targets.split(",") if t.strip()]
+    results = tool.batch_replace(urls, args.payload)
+    _output({"total": len(results), "urls": results, "payload": args.payload})
 
 
 # --- Database commands ---
