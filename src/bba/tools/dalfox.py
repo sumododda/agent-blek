@@ -13,6 +13,10 @@ class DalfoxTool:
     def build_command(self, target_url: str) -> list[str]:
         return ["dalfox", "url", target_url, "--silence", "--format", "json"]
 
+    def build_command_pipe(self, targets_file: str) -> list[str]:
+        """Build command for pipe mode — reads URLs from file for mass scanning."""
+        return ["dalfox", "file", targets_file, "--silence", "--format", "json"]
+
     def parse_output(self, output: str) -> list[dict]:
         results = []
         for line in output.strip().splitlines():

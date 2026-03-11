@@ -65,8 +65,17 @@ class FfufTool:
         self.db = db
         self.program = program
 
-    def build_command(self, target_url: str, wordlist: str, filter_codes: str = "404") -> list[str]:
-        return ["ffuf", "-u", target_url, "-w", wordlist, "-json", "-s", "-fc", filter_codes, "-noninteractive", "-ac"]
+    def build_command(self, target_url: str, wordlist: str, filter_codes: str = "404",
+                      recursive: bool = False, recursion_depth: int = 2,
+                      match_codes: str | None = None) -> list[str]:
+        cmd = ["ffuf", "-u", target_url, "-w", wordlist, "-json", "-s", "-noninteractive", "-ac"]
+        if match_codes:
+            cmd.extend(["-mc", match_codes])
+        else:
+            cmd.extend(["-fc", filter_codes])
+        if recursive:
+            cmd.extend(["-recursion", "-recursion-depth", str(recursion_depth)])
+        return cmd
 
     def parse_output(self, output: str) -> list[dict]:
         if not output.strip():
@@ -100,10 +109,12 @@ class FfufTool:
         fuzz_value = self._get_fuzz_value(result)
         return any(p in fuzz_value for p in INTERESTING_PATHS)
 
-    async def run(self, target_url: str, wordlist: str, filter_codes: str = "404") -> dict:
+    async def run(self, target_url: str, wordlist: str, filter_codes: str = "404",
+                  recursive: bool = False, recursion_depth: int = 2,
+                  match_codes: str | None = None) -> dict:
         parsed = urlparse(target_url)
         domain = parsed.hostname or ""
-        result = await self.runner.run_command(tool="ffuf", command=self.build_command(target_url, wordlist, filter_codes), targets=[domain] if domain else [target_url])
+        result = await self.runner.run_command(tool="ffuf", command=self.build_command(target_url, wordlist, filter_codes, recursive, recursion_depth, match_codes), targets=[domain] if domain else [target_url])
         if not result.success:
             return {"total": 0, "results": [], "interesting": 0, "error": result.error}
         entries = self.parse_output(result.output)
