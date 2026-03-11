@@ -34,9 +34,12 @@ GO_TOOLS=(
   "github.com/dwisiswant0/crlfuzz/cmd/crlfuzz@latest"
   "github.com/tomnomnom/qsreplace@latest"
   "github.com/Charlie-belmer/nosqli@latest"
+  # Phase 5A — Infrastructure Hardening
+  "github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest"
+  "github.com/devploit/nomore403@latest"
 )
 
-BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox amass dnsx naabu alterx shuffledns puredns gowitness hakrevdns cdncheck asnmap tlsx uncover getJS subjack crlfuzz qsreplace nosqli)
+BIN_NAMES=(nuclei ffuf subfinder httpx katana gau dalfox amass dnsx naabu alterx shuffledns puredns gowitness hakrevdns cdncheck asnmap tlsx uncover getJS subjack crlfuzz qsreplace nosqli interactsh-client nomore403)
 
 status() { printf "\033[1;34m[+]\033[0m %s\n" "$*"; }
 ok()     { printf "\033[1;32m[✓]\033[0m %s\n" "$*"; }

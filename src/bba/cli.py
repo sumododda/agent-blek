@@ -54,6 +54,9 @@ Usage:
     bba scan jwt-tool <token> --program <prog> --domain <domain> [--mode scan|crack] [--wordlist path]
     bba scan smuggler <url> --program <prog>
     bba scan ppfuzz <targets> --program <prog>
+    bba scan interactsh-generate --program <prog> [--count 10] [--server url]
+    bba scan interactsh-poll <session-file> --program <prog> --domain <d>
+    bba scan nomore403 <url> --program <prog>
     bba recon uro <targets> --program <prog>
     bba recon qsreplace <targets> --program <prog> --payload <payload>
     bba db subdomains --program <prog>
@@ -974,6 +977,47 @@ async def cmd_scan_ppfuzz(args: argparse.Namespace) -> None:
         await db.close()
 
 
+# --- Phase 5A scan command handlers ---
+
+async def cmd_scan_interactsh_generate(args: argparse.Namespace) -> None:
+    scope = _load_scope(args.program)
+    runner = _make_runner(scope)
+    db = await _get_db()
+    try:
+        from bba.tools.interactsh import InteractshTool
+        tool = InteractshTool(runner=runner, db=db, program=args.program)
+        result = await tool.generate_urls(count=args.count, server=args.server)
+        _output(result)
+    finally:
+        await db.close()
+
+
+async def cmd_scan_interactsh_poll(args: argparse.Namespace) -> None:
+    scope = _load_scope(args.program)
+    runner = _make_runner(scope)
+    db = await _get_db()
+    try:
+        from bba.tools.interactsh import InteractshTool
+        tool = InteractshTool(runner=runner, db=db, program=args.program)
+        result = await tool.poll_interactions(args.session_file, domain=args.domain)
+        _output(result)
+    finally:
+        await db.close()
+
+
+async def cmd_scan_nomore403(args: argparse.Namespace) -> None:
+    scope = _load_scope(args.program)
+    runner = _make_runner(scope)
+    db = await _get_db()
+    try:
+        from bba.tools.nomore403 import Nomore403Tool
+        tool = Nomore403Tool(runner=runner, db=db, program=args.program)
+        result = await tool.run(args.url)
+        _output(result)
+    finally:
+        await db.close()
+
+
 # --- Phase 4 recon command handlers ---
 
 async def cmd_recon_uro(args: argparse.Namespace) -> None:
@@ -1473,6 +1517,23 @@ def build_parser() -> argparse.ArgumentParser:
     ppf.add_argument("targets", help="Targets file or comma-separated URLs")
     ppf.add_argument("--program", required=True, help="Program name")
     ppf.set_defaults(func=cmd_scan_ppfuzz)
+
+    ig = scan_sub.add_parser("interactsh-generate", help="Generate OOB callback URLs")
+    ig.add_argument("--count", type=int, default=10, help="Number of URLs to generate")
+    ig.add_argument("--server", default=None, help="Custom interactsh server URL")
+    ig.add_argument("--program", required=True, help="Program name")
+    ig.set_defaults(func=cmd_scan_interactsh_generate)
+
+    ip = scan_sub.add_parser("interactsh-poll", help="Poll for OOB interactions")
+    ip.add_argument("session_file", help="Session file from generate")
+    ip.add_argument("--domain", required=True, help="Domain being tested")
+    ip.add_argument("--program", required=True, help="Program name")
+    ip.set_defaults(func=cmd_scan_interactsh_poll)
+
+    nm4 = scan_sub.add_parser("nomore403", help="403 bypass automation")
+    nm4.add_argument("url", help="URL returning 403")
+    nm4.add_argument("--program", required=True, help="Program name")
+    nm4.set_defaults(func=cmd_scan_nomore403)
 
     # --- db ---
     db = subparsers.add_parser("db", help="Database queries")
