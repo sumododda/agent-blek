@@ -35,6 +35,20 @@ If any tools are missing after the install script, note which ones and continue 
 
 **Do NOT proceed to Phase 1 until the precheck is complete.**
 
+## Phase 0.5: Resume Check
+
+Check if a previous scan exists for this program:
+
+```bash
+uv run bba db scan-history --program $ARGUMENTS.program
+```
+
+If a previous incomplete run exists:
+- **Resume**: Skip completed phases, continue from the failed/pending phase
+- **Fresh**: Start a new run (but diff results against the previous run at the end)
+
+If no previous run exists, proceed normally.
+
 ## Phase 1: Initialize
 
 1. Verify scope file exists: `data/programs/$ARGUMENTS.program.yaml`
@@ -210,6 +224,22 @@ Dispatch the reporter agent:
 > Generate a professional security report for program $ARGUMENTS.program.
 > Include all validated findings with risk analysis and remediation.
 > Write the report to data/output/reports/.
+
+## Phase 12.5: Diff & Notify
+
+If this is not the first scan run, diff against the previous run:
+
+```bash
+uv run bba db scan-diff <old_run_id> <new_run_id> --category subdomains --program $ARGUMENTS.program
+uv run bba db scan-diff <old_run_id> <new_run_id> --category findings --program $ARGUMENTS.program
+```
+
+Send notifications for new findings (if notify is configured):
+```bash
+uv run bba scan notify-findings --program $ARGUMENTS.program --severity medium
+```
+
+Include the diff summary in the executive summary below.
 
 ## Phase 13: Executive Summary
 

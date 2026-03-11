@@ -65,25 +65,24 @@ uv run bba recon uncover <query> --program <prog> [--engines shodan,censys,fofa]
 uv run bba recon katana <targets> --program <prog>
 uv run bba recon gau <domain> --program <prog>
 uv run bba recon waymore <domain> --program <prog>         # enhanced wayback (73+ sources)
-uv run bba recon getjs <targets> --program <prog>          # JS file extraction
 uv run bba recon gowitness <targets> --program <prog>
+uv run bba recon cewler <url> --program <prog> [--depth 2]  # target-specific wordlist generation
 
 # Scan — vulnerability scanning
 uv run bba scan nuclei <targets> --program <prog> [--severity] [--tags] [--rate-limit] [--interactsh-url] [--interactsh-server] [--headless]
 uv run bba scan ffuf <url-with-FUZZ> --program <prog> [--wordlist]
 uv run bba scan feroxbuster <url> --program <prog> [--wordlist] [--depth 3]
-uv run bba scan sqlmap <url> --program <prog>
+uv run bba scan sqlmap <url> --program <prog> [--tamper] [--headers] [--cookie] [--data] [--method]
 uv run bba scan dalfox <url> --program <prog>
 
 # Scan — parameter & endpoint discovery
 uv run bba scan arjun <url> --program <prog>
 uv run bba scan paramspider <domain> --program <prog>
-uv run bba scan kiterunner <url> --program <prog> [--wordlist]
 
-# Scan — JS analysis
-uv run bba scan linkfinder <js-url> --program <prog>
-uv run bba scan secretfinder <js-url> --program <prog>
-uv run bba scan retirejs <path> --program <prog> [--domain] # vulnerable JS libs
+# Scan — JS analysis (jsluice replaces linkfinder/secretfinder/getjs)
+uv run bba scan jsluice-urls <js-url> --program <prog> --domain <d>     # extract URLs/paths from JS (AST)
+uv run bba scan jsluice-secrets <js-url> --program <prog> --domain <d>  # extract secrets from JS (AST)
+uv run bba scan retirejs <path> --program <prog> [--domain]             # vulnerable JS libs
 
 # Scan — cloud & brute-force
 uv run bba scan s3scanner <bucket> --program <prog>
@@ -96,15 +95,16 @@ uv run bba scan commix <url> --program <prog>                      # command inj
 uv run bba scan ghauri <url> --program <prog> [--level] [--technique] # advanced SQLi
 uv run bba scan nosqli <url> --program <prog>                      # NoSQL injection
 uv run bba scan xsstrike <url> --program <prog> [--blind] [--crawl] # XSS with WAF bypass
-uv run bba scan corscanner <url> --program <prog>                   # CORS misconfiguration
 uv run bba scan jwt-tool <token> --program <prog> --domain <d> [--mode scan|crack] [--wordlist] # JWT attacks
-uv run bba scan smuggler <url> --program <prog>                     # HTTP request smuggling
 uv run bba scan ppfuzz <targets> --program <prog>                   # prototype pollution
 
 # Scan — OOB detection & bypass
 uv run bba scan interactsh-generate --program <prog> [--count 10] [--server url]  # generate OOB callback URLs
 uv run bba scan interactsh-poll <session-file> --program <prog> --domain <d>      # poll for OOB interactions
 uv run bba scan nomore403 <url> --program <prog>                                  # automated 403 bypass
+uv run bba scan subzy <targets> --program <prog>                                   # subdomain takeover detection
+uv run bba scan clairvoyance <url> --program <prog> [--wordlist]                   # GraphQL schema reconstruction
+uv run bba scan cache-scanner <url> --program <prog>                               # web cache poisoning/deception
 
 # Recon — pipeline utilities
 uv run bba recon uro <targets> --program <prog>                     # URL deduplication
@@ -114,8 +114,10 @@ uv run bba recon qsreplace <targets> --program <prog> --payload <p> # query stri
 uv run bba recon git-dumper <url> --program <prog>
 uv run bba recon trufflehog <target> --program <prog>
 uv run bba recon gitleaks <source-path> --program <prog>
-uv run bba recon cloud-enum <keyword> --program <prog>
-uv run bba recon github-dork <org> --program <prog>        # GitHub secret dorking
+
+# Scan — notifications
+uv run bba scan notify <message> --program <prog> [--provider-config path]
+uv run bba scan notify-findings --program <prog> [--severity medium]
 
 # Database queries
 uv run bba db subdomains --program <prog>
@@ -130,19 +132,31 @@ uv run bba db summary --program <prog>
 uv run bba db add-finding --program <prog> --domain <d> --url <u> --vuln-type <t> --severity-level <s> --tool <t> --evidence <e> [--confidence <c>]
 uv run bba db update-finding <id> --status <validated|false_positive|needs_review>
 
+# Scan state & monitoring
+uv run bba db scan-history --program <prog>
+uv run bba db scan-status <run_id> --program <prog>
+uv run bba db scan-diff <old_id> <new_id> --category subdomains --program <prog>
+
+# Scope import
+uv run bba scope import-h1 <handle> [--name name] [--output path]
+uv run bba scope import-bc <handle> [--name name] [--output path]
+
 # Wordlist management
 uv run bba wordlist download [--name seclists|assetnote-best-dns|onelistforall|resolvers|all]
 uv run bba wordlist list
 
 # Reporting
 uv run bba report --program <prog>
+
+# Dry-run mode (global flag — logs commands without execution)
+uv run bba --dry-run scan nuclei <targets> --program <prog>
 ```
 
 All commands output JSON to stdout.
 
 ## Database
 
-SQLite at `data/db/findings.db`. Tables: subdomains, services, ports, urls, js_files, secrets, screenshots, findings, audit_log.
+SQLite at `data/db/findings.db`. Tables: subdomains, services, ports, urls, js_files, secrets, screenshots, findings, audit_log, scan_runs, scan_phases, scan_snapshots.
 
 Query via CLI: `bba db ...` or directly: `sqlite3 data/db/findings.db "<SQL>"`
 
