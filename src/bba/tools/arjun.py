@@ -11,7 +11,7 @@ class ArjunTool:
         self.program = program
 
     def build_command(self, url: str) -> list[str]:
-        return ["arjun", "-u", url, "--json", "-oJ", "/dev/stdout"]
+        return ["arjun", "-u", url, "-oJ", "/dev/stdout"]
 
     def parse_output(self, output: str) -> list[dict]:
         results = []

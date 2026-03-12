@@ -1,0 +1,128 @@
+program: epicgames
+platform: hackerone
+handle: epicgames
+in_scope:
+  domains:
+    # Core Epic Games
+    - "epicgames.com"
+    - "*.epicgames.com"
+    - "epicgames.dev"
+    - "*.epicgames.dev"
+    - "fortnite.com"
+    - "*.fortnite.com"
+    - "unrealengine.com"
+    - "*.unrealengine.com"
+    - "unrealtournament.com"
+    - "*.unrealtournament.com"
+    # Creative & marketplace
+    - "artstation.com"
+    - "*.artstation.com"
+    - "sketchfab.com"
+    - "*.sketchfab.com"
+    - "quixel.com"
+    - "*.quixel.com"
+    - "fab.com"
+    - "*.fab.com"
+    - "capturingreality.com"
+    - "*.capturingreality.com"
+    - "twinmotion.com"
+    - "*.twinmotion.com"
+    # Rocket League / Psyonix
+    - "rocketleague.com"
+    - "*.rocketleague.com"
+    - "psyonix.com"
+    - "*.psyonix.com"
+    - "psynet.gg"
+    - "*.psynet.gg"
+    # Fall Guys / Mediatonic
+    - "fallguys.com"
+    - "*.fallguys.com"
+    - "mediatonic.co.uk"
+    - "*.mediatonic.co.uk"
+    # Harmonix (music games)
+    - "harmonixmusic.com"
+    - "*.harmonixmusic.com"
+    - "hmxservices.com"
+    - "*.hmxservices.com"
+    - "hmxwebservices.com"
+    - "*.hmxwebservices.com"
+    - "dropmix.com"
+    - "*.dropmix.com"
+    - "singspacegame.com"
+    - "*.singspacegame.com"
+    - "audicagame.com"
+    - "*.audicagame.com"
+    - "dancecentral.com"
+    - "*.dancecentral.com"
+    - "amplitude-game.com"
+    - "*.amplitude-game.com"
+    # Anti-cheat
+    - "easy.ac"
+    - "*.easy.ac"
+    # Kids web services
+    - "kidswebservices.com"
+    - "*.kidswebservices.com"
+    # 3Lateral (facial animation)
+    - "3lateral.com"
+    - "*.3lateral.com"
+    # Catapult
+    - "oncatapult.com"
+    - "*.oncatapult.com"
+    # Aquiris studio
+    - "aquiris.com.br"
+    - "*.aquiris.com.br"
+    - "aquiris.studio"
+    - "*.aquiris.studio"
+    - "aquiristech.com"
+    - "*.aquiristech.com"
+    - "aqtooling.com"
+    - "*.aqtooling.com"
+    # Other
+    - "ballistic.com"
+    - "*.ballistic.com"
+    - "ballistic.com.br"
+    - "*.ballistic.com.br"
+    - "buckingfuggy.com"
+    - "*.buckingfuggy.com"
+    - "hc2services.com"
+    - "*.hc2services.com"
+    - "hc2tooling.com"
+    - "*.hc2tooling.com"
+    - "wonderboxapi.com"
+    - "*.wonderboxapi.com"
+    - "wonderboxdev.com"
+    - "*.wonderboxdev.com"
+    - "playwonderbox.com"
+    - "*.playwonderbox.com"
+    - "playwonderbox.com.br"
+    - "*.playwonderbox.com.br"
+    - "horizonchase.com"
+    - "*.horizonchase.com"
+    - "horizonchase.com.br"
+    - "*.horizonchase.com.br"
+    - "horizonchaseturbo.com"
+    - "*.horizonchaseturbo.com"
+    # Specific high-value endpoints
+    - "communities.epicgames.com"
+    - "dev.epicgames.com"
+  cidrs: []
+out_of_scope:
+  domains:
+    - "*.bandcamp.com"
+    - "*.bcbits.com"
+    - "*.jellychat.com"
+    - "forum.sketchfab.com"
+    - "help.sketchfab.com"
+  paths:
+    - "/logout"
+    - "/account/delete"
+rate_limit:
+  requests_per_second: 10
+  burst: 20
+notes: |
+  HackerOne program: https://hackerone.com/epicgames
+  85+ in-scope targets, 25+ wildcard domains.
+  Scope includes: web apps, game clients, SDKs, anti-cheat.
+  "Any other Epic games owned asset not listed in the out of scope section" is also in scope.
+  Custom header recommended for all traffic.
+  No explicit prohibition on automated scanning tools.

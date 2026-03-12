@@ -94,7 +94,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 DB_PATH = DATA_DIR / "db" / "findings.db"
 OUTPUT_DIR = DATA_DIR / "output"
 PROGRAMS_DIR = DATA_DIR / "programs"
-DEFAULT_WORDLIST = "/usr/share/wordlists/dirb/common.txt"
+DEFAULT_WORDLIST = "/home/sumo/agent-blek/data/wordlists/seclists/Discovery/Web-Content/common.txt"
 
 
 def _load_scope(program: str) -> ScopeConfig:

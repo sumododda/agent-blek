@@ -95,7 +95,7 @@ async def cmd_scan_feroxbuster(args: argparse.Namespace) -> None:
         from bba.tools.feroxbuster import FeroxbusterTool
         tool = FeroxbusterTool(runner=runner, db=db, program=args.program)
         result = await tool.run(
-            target_url=args.url,
+            url=args.url,
             wordlist=args.wordlist or _bba_cli.DEFAULT_WORDLIST,
             depth=args.depth,
         )
