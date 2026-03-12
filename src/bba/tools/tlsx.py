@@ -13,7 +13,7 @@ class TlsxTool:
     def build_command(self, domains: list[str], work_dir: Path) -> list[str]:
         input_file = work_dir / "tlsx_input.txt"
         input_file.write_text("\n".join(domains) + "\n")
-        return ["tlsx", "-l", str(input_file), "-json", "-silent", "-san", "-cn", "-so"]
+        return ["tlsx", "-l", str(input_file), "-json", "-silent", "-san", "-cn"]
 
     def parse_output(self, output: str) -> list[dict]:
         results = []

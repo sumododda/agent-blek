@@ -1,0 +1,106 @@
+program: marriott
+platform: bugcrowd
+handle: marriott
+in_scope:
+  domains:
+    # Critical priority - core properties
+    - "www.marriott.com"
+    - "sso.marriott.com"
+    - "reservations.all-inclusive.marriott.com"
+    - "psp.marriott.com"
+    - "passwordchallenge.marriott.com"
+    - "moments.marriottbonvoy.com"
+    - "mgs.marriott.com"
+    - "marrtool.com"
+    - "marriottfranchisetransactions.marriott.com"
+    - "lawmanager.marriott.com"
+    - "jobs.marriott.com"
+    - "homes-and-villas.marriott.com"
+    - "help.marriott.com"
+    - "gatewaydsaptst1.marriott.com"
+    - "gatewaydsapdev2.marriott.com"
+    - "esupplier.marriott.com"
+    - "editionhotels.com"
+    - "dcfgatewaytst1.marriott.com"
+    - "cpp.marriott.com"
+    - "careers.marriott.com"
+    - "all-inclusive.marriott.com"
+    # Critical - wildcards / gateway patterns
+    - "*.gateway.marriott.com"
+    - "*.dcfgateway.marriott.com"
+    - "*gateway-apc.marriott.com"
+    # High priority
+    - "www.ritzcarlton.com"
+    - "wechat.api.marriott.com"
+    - "traveler.marriott.com"
+    - "travelagents.marriott.com"
+    - "ssm-marriottms.saviyntcloud.com"
+    - "mipartnerprivileges.marriott.com"
+    - "ifast.marriott.com"
+    - "gatewaydsaptst2.marriott.com"
+    - "eidhelp.marriott.com"
+    - "efast.marriott.com"
+    - "device.marriott.com"
+    - "bpa2.marriott.com"
+    - "auth-apc.marriott.com"
+    - "apcgateway.marriott.com"
+    - "activities.marriott.com"
+    # High - wildcards
+    - "*.sba.marriott.com"
+    - "*.mgs.marriott.com"
+    - "*.artifactory.marriott.com"
+    - "*.apigwc.marriott.com"
+    - "*.apigatewayc.marriott.com"
+    # High - UAT environments
+    - "*uat.marriott.com"
+    # Medium priority
+    - "www.travel-brilliantly.marriott.com"
+    - "university.marriott.com"
+    - "uber.marriott.com"
+    - "smetrics.marriott.com"
+    - "prod-mipaasiaasservices.marriott.com"
+    - "owa.marriott.com"
+    - "ocijlbex1prd.marriott.com"
+    - "oasisprod.marriott.com"
+    - "meetmarriottbonvoy.marriott.com"
+    - "mds.marriott.com"
+    - "joinrewards.marriott.com"
+    - "joinmarriottbonvoy.com"
+    - "join.marriott.com"
+    - "www.shopmarriott.com"
+    - "hotel-development.marriott.com"
+    - "hotel-deals.marriott.com"
+    - "globaldesign.marriott.com"
+    - "gifts.marriott.com"
+    - "contentportalauth.marriott.com"
+    - "contentportal.marriott.com"
+    - "ci-propertyconversionportal.marriott.com"
+    - "channel-portal.homes-and-villas.marriott.com"
+    - "cache.marriott.com"
+    - "bsp.marriott.com"
+    - "bilt.marriott.com"
+    - "app-insiders.marriott.com"
+    # Low priority
+    - "www.members.marriott.com"
+    - "www.giving.marriott.com"
+    - "vacation.marriott.com"
+    - "splunk-phantom-nlb.marriott.com"
+    - "moments.marriott.com"
+  cidrs: []
+out_of_scope:
+  domains: []
+  paths:
+    - "/logout"
+    - "/account/delete"
+rate_limit:
+  requests_per_second: 5
+  burst: 10
+notes: |
+  Bugcrowd program for Marriott International.
+  Large attack surface: 70+ explicit domains plus wildcard patterns.
+  Key targets include SSO, reservation systems, employee password reset,
+  gateway/API infrastructure, UAT environments, and luxury brand sites.
+  passwordchallenge.marriott.com handles employee password resets - high value.
+  *uat.marriott.com are user acceptance testing environments.
+  iOS app (App Store ID 455004730) also in scope but not testable via CLI.
+  Conservative rate limiting (5 rps) - large enterprise, be respectful.

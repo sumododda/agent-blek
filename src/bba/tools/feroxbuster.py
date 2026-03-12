@@ -1,5 +1,7 @@
 from __future__ import annotations
 import json
+import os
+import tempfile
 from urllib.parse import urlparse
 from bba.db import Database
 from bba.tool_runner import ToolRunner
@@ -10,7 +12,7 @@ INTERESTING_PATHS = [
     ".svn", ".DS_Store", "wp-admin", "phpmyadmin", "actuator",
 ]
 
-DEFAULT_WORDLIST = "/usr/share/wordlists/dirb/common.txt"
+DEFAULT_WORDLIST = "/home/sumo/agent-blek/data/wordlists/seclists/Discovery/Web-Content/common.txt"
 
 class FeroxbusterTool:
     def __init__(self, runner: ToolRunner, db: Database, program: str):
@@ -18,11 +20,11 @@ class FeroxbusterTool:
         self.db = db
         self.program = program
 
-    def build_command(self, url: str, wordlist: str = DEFAULT_WORDLIST, depth: int = 3) -> list[str]:
+    def build_command(self, url: str, wordlist: str = DEFAULT_WORDLIST, depth: int = 3, output_file: str = "/dev/stdout") -> list[str]:
         return [
             "feroxbuster", "-u", url, "-w", wordlist,
             "--json", "--silent", "--depth", str(depth),
-            "--rate-limit", "100", "--auto-tune",
+            "--rate-limit", "50", "--output", output_file,
         ]
 
     def parse_output(self, output: str) -> list[dict]:
@@ -45,15 +47,33 @@ class FeroxbusterTool:
 
     async def run(self, url: str, wordlist: str = DEFAULT_WORDLIST, depth: int = 3) -> dict:
         domain = urlparse(url).hostname or url
-        result = await self.runner.run_command(
-            tool="feroxbuster",
-            command=self.build_command(url, wordlist, depth),
-            targets=[domain],
-            timeout=600,
-        )
-        if not result.success:
-            return {"total": 0, "urls": [], "interesting": [], "error": result.error}
-        entries = self.parse_output(result.output)
+        # feroxbuster requires --output when using --json --silent, write to temp file
+        tmpfile = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+        tmpfile.close()
+        try:
+            result = await self.runner.run_command(
+                tool="feroxbuster",
+                command=self.build_command(url, wordlist, depth, output_file=tmpfile.name),
+                targets=[domain],
+                timeout=600,
+            )
+            # Read output from temp file
+            raw_output = ""
+            if os.path.exists(tmpfile.name):
+                with open(tmpfile.name, "r") as f:
+                    raw_output = f.read()
+            # Fallback to result.output if temp file is empty
+            if not raw_output.strip() and result.output:
+                raw_output = result.output
+            if not raw_output.strip() and not result.success:
+                return {"total": 0, "urls": [], "interesting": [], "error": result.error}
+        finally:
+            try:
+                os.unlink(tmpfile.name)
+            except OSError:
+                pass
+
+        entries = self.parse_output(raw_output)
         discovered_urls = []
         interesting = []
         for entry in entries:
