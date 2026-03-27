@@ -21,15 +21,7 @@ class JsluiceTool:
         return ["jsluice", "secrets", js_file]
 
     def parse_output(self, output: str) -> list[dict]:
-        results = []
-        for line in output.strip().splitlines():
-            if not line.strip():
-                continue
-            try:
-                results.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-        return results
+        return self.runner.parse_jsonl(output)
 
     async def run_urls(self, js_url: str, domain: str) -> dict:
         result = await self.runner.run_command(

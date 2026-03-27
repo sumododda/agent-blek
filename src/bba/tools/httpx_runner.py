@@ -1,5 +1,4 @@
 from __future__ import annotations
-import json
 from collections import Counter
 from pathlib import Path
 from bba.db import Database
@@ -12,21 +11,11 @@ class HttpxTool:
         self.program = program
 
     def build_command(self, domains: list[str], work_dir: Path) -> list[str]:
-        input_file = work_dir / "httpx_input.txt"
-        input_file.write_text("\n".join(domains) + "\n")
+        input_file = self.runner.create_input_file(domains, work_dir, filename="httpx_input.txt")
         return ["httpx", "-l", str(input_file), "-silent", "-json", "-nc"]
 
     def parse_output(self, output: str) -> list[dict]:
-        results = []
-        for line in output.strip().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                results.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-        return results
+        return self.runner.parse_jsonl(output)
 
     async def run(self, domains: list[str], work_dir: Path) -> dict:
         result = await self.runner.run_command(

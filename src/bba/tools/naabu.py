@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from bba.db import Database
@@ -34,16 +33,7 @@ class NaabuTool:
         return cmd
 
     def parse_output(self, output: str) -> list[dict]:
-        results = []
-        for line in output.strip().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                results.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-        return results
+        return self.runner.parse_jsonl(output)
 
     async def run(
         self,

@@ -1,9 +1,7 @@
 from __future__ import annotations
-import json
 import os
 import tempfile
 from pathlib import Path
-from urllib.parse import urlparse
 from bba.db import Database
 from bba.tool_runner import ToolRunner
 
@@ -31,16 +29,9 @@ class FeroxbusterTool:
 
     def parse_output(self, output: str) -> list[dict]:
         results = []
-        for line in output.strip().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-                if entry.get("type") == "response" or "url" in entry:
-                    results.append(entry)
-            except json.JSONDecodeError:
-                continue
+        for entry in self.runner.parse_jsonl(output):
+            if entry.get("type") == "response" or "url" in entry:
+                results.append(entry)
         return results
 
     def _is_interesting(self, url: str) -> bool:
@@ -48,7 +39,7 @@ class FeroxbusterTool:
         return any(p in lower for p in INTERESTING_PATHS)
 
     async def run(self, url: str, wordlist: str = DEFAULT_WORDLIST, depth: int = 3) -> dict:
-        domain = urlparse(url).hostname or url
+        domain = self.runner.extract_domain(url)
         # feroxbuster requires --output when using --json --silent, write to temp file
         tmpfile = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
         tmpfile.close()

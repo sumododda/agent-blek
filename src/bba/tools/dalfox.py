@@ -1,6 +1,5 @@
 from __future__ import annotations
 import json
-from urllib.parse import urlparse
 from bba.db import Database
 from bba.tool_runner import ToolRunner
 
@@ -18,20 +17,10 @@ class DalfoxTool:
         return ["dalfox", "file", targets_file, "--silence", "--format", "json"]
 
     def parse_output(self, output: str) -> list[dict]:
-        results = []
-        for line in output.strip().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                results.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-        return results
+        return self.runner.parse_jsonl(output)
 
     async def run(self, target_url: str) -> dict:
-        parsed = urlparse(target_url)
-        domain = parsed.hostname or ""
+        domain = self.runner.extract_domain(target_url)
         result = await self.runner.run_command(tool="dalfox", command=self.build_command(target_url), targets=[domain] if domain else [target_url])
         if not result.success:
             return {"total": 0, "findings": [], "error": result.error}
