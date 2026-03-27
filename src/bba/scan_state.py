@@ -37,8 +37,22 @@ CREATE TABLE IF NOT EXISTS scan_snapshots (
 """
 
 ALL_PHASES = [
-    "recon", "infrastructure", "osint", "scanning",
-    "vuln-testing", "deep-dive", "validation", "reporting",
+    "precheck",
+    "initialize",
+    "recon",
+    "recon-analysis",
+    "infrastructure",
+    "osint",
+    "scan-planning",
+    "scanning",
+    "scan-analysis",
+    "vuln-testing",
+    "vuln-analysis",
+    "deep-dive",
+    "validation",
+    "validation-analysis",
+    "reporting",
+    "diff-notify",
 ]
 
 
@@ -122,6 +136,31 @@ class ScanState:
             (run_id, category, json.dumps(sorted(items))),
         )
         await self.db._conn.commit()
+
+    async def set_phase_output(self, run_id: int, phase: str, key: str, value: str) -> None:
+        await self.db._conn.execute(
+            """INSERT INTO phase_outputs (run_id, phase, key, value)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(run_id, phase, key) DO UPDATE SET value = excluded.value""",
+            (run_id, phase, key, value),
+        )
+        await self.db._conn.commit()
+
+    async def get_phase_output(self, run_id: int, phase: str, key: str) -> str | None:
+        cursor = await self.db._conn.execute(
+            "SELECT value FROM phase_outputs WHERE run_id = ? AND phase = ? AND key = ?",
+            (run_id, phase, key),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else None
+
+    async def get_all_phase_outputs(self, run_id: int, phase: str) -> dict[str, str]:
+        cursor = await self.db._conn.execute(
+            "SELECT key, value FROM phase_outputs WHERE run_id = ? AND phase = ?",
+            (run_id, phase),
+        )
+        rows = await cursor.fetchall()
+        return {row[0]: row[1] for row in rows}
 
     async def diff_snapshots(self, run_id_old: int, run_id_new: int, category: str) -> dict:
         cursor = await self.db._conn.execute(
