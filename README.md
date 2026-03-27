@@ -185,7 +185,7 @@ cd agent-blek
 claude
 
 # Inside Claude Code, run:
-/scan-target example
+/scan-target acme-corp
 ```
 
 This launches the full pipeline: Recon -> Infrastructure -> OSINT -> Scanning -> Vuln Testing -> Deep Dive -> Validation -> Reporting. The Opus coordinator reasons between each phase and decides what to prioritize.
