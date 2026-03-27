@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,6 +34,36 @@ class ToolRunner:
         self.sanitizer = sanitizer
         self.output_dir = output_dir
         self.dry_run = dry_run
+
+    @staticmethod
+    def parse_jsonl(output: str) -> list[dict]:
+        results = []
+        for line in output.strip().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                results.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        return results
+
+    @staticmethod
+    def create_input_file(targets: list[str], work_dir: Path, filename: str = "targets.txt") -> Path:
+        input_file = work_dir / filename
+        input_file.write_text("\n".join(targets) + "\n")
+        return input_file
+
+    @staticmethod
+    def extract_domain(target: str) -> str:
+        if "://" in target:
+            from urllib.parse import urlparse
+            return urlparse(target).hostname or target
+        return target
+
+    @staticmethod
+    def error_result(error: str | None = None) -> dict:
+        return {"total": 0, "results": [], "error": error}
 
     def validate_targets(self, targets: list[str]) -> None:
         for target in targets:
