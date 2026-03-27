@@ -1,7 +1,7 @@
 """Import program scope from HackerOne/Bugcrowd into our YAML format."""
 from __future__ import annotations
 
-import re
+import ipaddress
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -19,7 +19,11 @@ class ScopeImporter:
         return asset.rstrip("/")
 
     def _is_cidr(self, asset: str) -> bool:
-        return bool(re.match(r"^\d+\.\d+\.\d+\.\d+/\d+$", asset))
+        try:
+            ipaddress.ip_network(asset, strict=False)
+            return True
+        except ValueError:
+            return False
 
     def parse_hackerone(self, data: dict, program_name: str) -> dict:
         in_domains = []
