@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from pathlib import Path
 from urllib.parse import urlparse
 from bba.db import Database
 from bba.tool_runner import ToolRunner
@@ -12,7 +13,8 @@ INTERESTING_PATHS = [
     ".svn", ".DS_Store", "wp-admin", "phpmyadmin", "actuator",
 ]
 
-DEFAULT_WORDLIST = "/home/sumo/agent-blek/data/wordlists/seclists/Discovery/Web-Content/common.txt"
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+DEFAULT_WORDLIST = str(_PROJECT_ROOT / "data" / "wordlists" / "seclists" / "Discovery" / "Web-Content" / "common.txt")
 
 class FeroxbusterTool:
     def __init__(self, runner: ToolRunner, db: Database, program: str):
