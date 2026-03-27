@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install all security tools required by the bug bounty agent.
+# Install all security tools required by the offensive security agent.
 # Idempotent — skips tools that are already installed.
 # No sudo required — installs everything under $HOME.
 # Optional: sudo apt install build-essential libpcap-dev nmap
@@ -389,7 +389,7 @@ install_bba() {
 
 # ---------- Main ----------
 main() {
-  status "Bug Bounty Agent — Tool Installation"
+  status "Offensive Security Agent — Tool Installation"
   echo ""
 
   install_go

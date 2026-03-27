@@ -1,6 +1,6 @@
 # agent-blek
 
-Autonomous bug bounty agent powered by Claude Code. Orchestrates reconnaissance, vulnerability scanning, OSINT, validation, and reporting through specialized AI agents.
+Autonomous offensive security agent powered by Claude Code. Orchestrates reconnaissance, vulnerability scanning, OSINT, validation, and reporting through specialized AI agents.
 
 ## Architecture
 

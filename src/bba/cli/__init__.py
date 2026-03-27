@@ -226,7 +226,7 @@ def build_parser() -> argparse.ArgumentParser:
     from bba.cli.db_cmds import register_db_commands
     from bba.cli.report import register_report_commands
 
-    parser = argparse.ArgumentParser(prog="bba", description="Bug Bounty Agent CLI")
+    parser = argparse.ArgumentParser(prog="bba", description="Offensive Security Agent CLI")
     parser.add_argument("--dry-run", action="store_true", help="Log commands without executing")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
