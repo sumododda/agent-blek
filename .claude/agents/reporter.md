@@ -143,6 +143,25 @@ This assessment was performed within the authorized scope. Findings represent th
 uv run bba report --program <program>
 ```
 
+## Coverage Section
+
+Query and include coverage data in the report:
+
+```bash
+uv run bba db coverage --program $PROGRAM
+```
+
+Show: total endpoints discovered, tested count, skipped count, skip reasons breakdown.
+
+## Validation Statistics Section
+
+Include:
+- Total findings before validation: [count from `uv run bba db findings --program $PROGRAM`]
+- Validated: [count with status=validated]
+- False positives: [count with status=false_positive] — break down by validation_reason if possible
+- Needs review: [count with status=needs_review]
+- False positive rate: [percentage]
+
 ## Output
 
 Return the full report content and the file path where it was saved.

@@ -74,15 +74,18 @@ This is the critical step. Don't just regex-match — reason:
 | 0.0-0.2 | False positive | No evidence of vulnerability |
 
 #### 2e. Update Database
+
+Always include `--reason` with every status update (see Origin-Aware Validation section):
+
 ```bash
 # If validated
-uv run bba db update-finding <id> --status validated
+uv run bba db update-finding <id> --status validated --reason "<why it's real>"
 
 # If false positive
-uv run bba db update-finding <id> --status false_positive
+uv run bba db update-finding <id> --status false_positive --reason "<why it's not real>"
 
 # If needs more investigation
-uv run bba db update-finding <id> --status needs_review
+uv run bba db update-finding <id> --status needs_review --reason "<what's unclear>"
 ```
 
 ### Step 3: Summary Output
@@ -117,6 +120,22 @@ uv run bba db update-finding <id> --status needs_review
 - Needs review: X
 - Overall false-positive rate: X%
 ```
+
+## Origin-Aware Validation
+
+When validating, note the finding source via the `tool` field:
+- **Automated tools** (nuclei, dalfox, sqlmap) — higher false-positive rate, test thoroughly
+- **Deep-dive** (manual-deep-dive) — already manually investigated, verify the PoC reproduces
+
+Include `--reason` with EVERY status update:
+
+```bash
+uv run bba db update-finding <id> --status validated --reason "XSS fires in Chrome, reflected in unquoted attribute"
+uv run bba db update-finding <id> --status false_positive --reason "Response is static 403 page, not actual injection"
+uv run bba db update-finding <id> --status needs_review --reason "Intermittent — reproduced once but not consistently"
+```
+
+Never update a finding status without providing a reason.
 
 ## Rules
 

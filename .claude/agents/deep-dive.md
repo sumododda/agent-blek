@@ -78,15 +78,11 @@ State your conclusion clearly:
 - **DENIED**: Not vulnerable, with reasoning
 
 ### 6. STORE (if confirmed/likely)
+
+When storing confirmed findings, always use `tool="manual-deep-dive"`:
+
 ```bash
-uv run bba db add-finding --program <program> \
-  --domain <domain> \
-  --url "<url>" \
-  --vuln-type "<type>" \
-  --severity-level "<severity>" \
-  --tool "manual-deep-dive" \
-  --evidence "<detailed evidence>" \
-  --confidence <0.0-1.0>
+uv run bba db add-finding --program $PROGRAM --domain <domain> --url <url> --vuln-type <type> --severity-level <severity> --tool manual-deep-dive --evidence "<detailed evidence>" --confidence <0.0-1.0>
 ```
 
 ## Output Format
