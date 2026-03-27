@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS secrets (
     tool TEXT NOT NULL,
     confidence REAL DEFAULT 0.5,
     status TEXT DEFAULT 'new',
-    discovered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    discovered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(program, secret_type, value)
 );
 
 CREATE TABLE IF NOT EXISTS screenshots (
@@ -122,6 +123,9 @@ CREATE INDEX IF NOT EXISTS idx_urls_program ON urls(program);
 CREATE INDEX IF NOT EXISTS idx_js_files_program ON js_files(program);
 CREATE INDEX IF NOT EXISTS idx_secrets_program ON secrets(program);
 CREATE INDEX IF NOT EXISTS idx_screenshots_program ON screenshots(program);
+CREATE INDEX IF NOT EXISTS idx_audit_log_tool ON audit_log(tool);
+CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_audit_log_target ON audit_log(target);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_findings_dedup ON findings(program, url, vuln_type);
 """
@@ -205,9 +209,11 @@ class Database:
             """INSERT INTO findings (program, domain, url, vuln_type, severity, tool, evidence, confidence)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(program, url, vuln_type) DO UPDATE SET
-                 evidence = findings.evidence || '; ' || excluded.evidence,
+                 evidence = CASE WHEN LENGTH(findings.evidence) < 50000
+                           THEN findings.evidence || '; ' || excluded.evidence
+                           ELSE findings.evidence END,
                  confidence = MAX(findings.confidence, excluded.confidence),
-                 tool = CASE WHEN findings.tool NOT LIKE '%' || excluded.tool || '%'
+                 tool = CASE WHEN ',' || findings.tool || ',' NOT LIKE '%,' || excluded.tool || ',%'
                         THEN findings.tool || ',' || excluded.tool
                         ELSE findings.tool END""",
             (program, domain, url, vuln_type, severity, tool, evidence, confidence),
@@ -362,7 +368,7 @@ class Database:
         source_url: str, source_file: str, tool: str, confidence: float,
     ) -> None:
         await self._conn.execute(
-            """INSERT INTO secrets
+            """INSERT OR IGNORE INTO secrets
                (program, secret_type, value, source_url, source_file, tool, confidence)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (program, secret_type, value, source_url, source_file, tool, confidence),
