@@ -1,5 +1,4 @@
 from __future__ import annotations
-import json
 from bba.db import Database
 from bba.tool_runner import ToolRunner
 
@@ -13,16 +12,7 @@ class AsnmapTool:
         return ["asnmap", "-d", domain, "-json", "-silent"]
 
     def parse_output(self, output: str) -> list[dict]:
-        results = []
-        for line in output.strip().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                results.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-        return results
+        return self.runner.parse_jsonl(output)
 
     async def run(self, domain: str) -> dict:
         result = await self.runner.run_command(

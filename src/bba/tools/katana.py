@@ -1,5 +1,4 @@
 from __future__ import annotations
-import json
 from pathlib import Path
 from bba.db import Database
 from bba.tool_runner import ToolRunner
@@ -11,23 +10,15 @@ class KatanaTool:
         self.program = program
 
     def build_command(self, targets: list[str], work_dir: Path) -> list[str]:
-        input_file = work_dir / "katana_input.txt"
-        input_file.write_text("\n".join(targets) + "\n")
+        input_file = self.runner.create_input_file(targets, work_dir, filename="katana_input.txt")
         return ["katana", "-list", str(input_file), "-silent", "-json"]
 
     def parse_output(self, output: str) -> list[str]:
         urls = []
-        for line in output.strip().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                data = json.loads(line)
-                endpoint = data.get("request", {}).get("endpoint", "")
-                if endpoint:
-                    urls.append(endpoint)
-            except json.JSONDecodeError:
-                continue
+        for entry in self.runner.parse_jsonl(output):
+            endpoint = entry.get("request", {}).get("endpoint", "")
+            if endpoint:
+                urls.append(endpoint)
         return urls
 
     async def run(self, targets: list[str], work_dir: Path) -> dict:
