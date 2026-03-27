@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import aiosqlite
@@ -135,6 +136,7 @@ class Database:
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._conn: aiosqlite.Connection | None = None
+        self._batch_mode: bool = False
 
     async def initialize(self):
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -148,6 +150,15 @@ class Database:
             await self._conn.close()
             self._conn = None
 
+    @asynccontextmanager
+    async def batch(self):
+        self._batch_mode = True
+        try:
+            yield
+        finally:
+            self._batch_mode = False
+            await self._conn.commit()
+
     async def list_tables(self) -> list[str]:
         cursor = await self._conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
@@ -160,7 +171,8 @@ class Database:
             "INSERT OR IGNORE INTO subdomains (program, domain, source) VALUES (?, ?, ?)",
             (program, domain, source),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def add_subdomains_bulk(self, program: str, domains: list[str], source: str) -> int:
         rows = [(program, d, source) for d in domains]
@@ -168,7 +180,8 @@ class Database:
             "INSERT OR IGNORE INTO subdomains (program, domain, source) VALUES (?, ?, ?)",
             rows,
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
         return len(domains)
 
     async def get_subdomains(self, program: str) -> list[dict]:
@@ -191,7 +204,8 @@ class Database:
                  title=excluded.title, technologies=excluded.technologies""",
             (program, domain, ip, port, status_code, title, technologies),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def get_services(self, program: str) -> list[dict]:
         cursor = await self._conn.execute(
@@ -218,7 +232,8 @@ class Database:
                         ELSE findings.tool END""",
             (program, domain, url, vuln_type, severity, tool, evidence, confidence),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
         return cursor.lastrowid
 
     async def update_finding_status(self, finding_id: int, status: str) -> None:
@@ -226,7 +241,8 @@ class Database:
             "UPDATE findings SET status = ?, validated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (status, finding_id),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def get_findings(
         self, program: str, severity: str | None = None, status: str | None = None,
@@ -249,7 +265,8 @@ class Database:
             "INSERT INTO audit_log (action, tool, target, details) VALUES (?, ?, ?, ?)",
             (action, tool, target, details),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def get_audit_log(self, limit: int = 50) -> list[dict]:
         cursor = await self._conn.execute(
@@ -271,7 +288,8 @@ class Database:
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (program, domain, ip, port, protocol, service, version, source),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def add_ports_bulk(self, program: str, ports: list[dict], source: str) -> int:
         rows = [
@@ -285,7 +303,8 @@ class Database:
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             rows,
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
         return len(ports)
 
     async def get_ports(self, program: str) -> list[dict]:
@@ -308,7 +327,8 @@ class Database:
                VALUES (?, ?, ?, ?, ?)""",
             (program, url, source, status_code, content_type),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def add_urls_bulk(self, program: str, urls: list[str], source: str) -> int:
         rows = [(program, u, source) for u in urls]
@@ -316,7 +336,8 @@ class Database:
             "INSERT OR IGNORE INTO urls (program, url, source) VALUES (?, ?, ?)",
             rows,
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
         return len(urls)
 
     async def get_urls(self, program: str, source: str | None = None) -> list[dict]:
@@ -337,7 +358,8 @@ class Database:
             "INSERT OR IGNORE INTO js_files (program, url, source_page) VALUES (?, ?, ?)",
             (program, url, source_page),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def update_js_file(
         self, program: str, url: str, endpoints_extracted: int, secrets_found: int,
@@ -347,7 +369,8 @@ class Database:
                analyzed_at = CURRENT_TIMESTAMP WHERE program = ? AND url = ?""",
             (endpoints_extracted, secrets_found, program, url),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def get_js_files(self, program: str, analyzed: bool | None = None) -> list[dict]:
         query = "SELECT * FROM js_files WHERE program = ?"
@@ -373,7 +396,8 @@ class Database:
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (program, secret_type, value, source_url, source_file, tool, confidence),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def get_secrets(self, program: str, status: str | None = None) -> list[dict]:
         query = "SELECT * FROM secrets WHERE program = ?"
@@ -398,7 +422,8 @@ class Database:
                VALUES (?, ?, ?, ?, ?)""",
             (program, url, file_path, status_code, title),
         )
-        await self._conn.commit()
+        if not self._batch_mode:
+            await self._conn.commit()
 
     async def get_screenshots(self, program: str) -> list[dict]:
         cursor = await self._conn.execute(
