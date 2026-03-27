@@ -206,6 +206,10 @@ from bba.cli.db_cmds import (  # noqa: E402
     cmd_db_scan_history,
     cmd_db_scan_status,
     cmd_db_scan_diff,
+    cmd_db_set_phase_output,
+    cmd_db_get_phase_output,
+    cmd_db_coverage,
+    cmd_db_add_coverage,
 )
 from bba.cli.report import (  # noqa: E402
     cmd_wordlist_download,
