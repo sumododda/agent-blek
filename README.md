@@ -53,6 +53,14 @@ export CENSYS_API_SECRET="..."
 export GITHUB_TOKEN="..."          # Trufflehog GitHub scanning
 ```
 
+You can also embed API keys directly in scope YAML files using environment variable substitution:
+
+```yaml
+api_keys:
+  shodan: "${SHODAN_API_KEY}"
+  censys_id: "${CENSYS_API_ID}"
+```
+
 ## Setup
 
 ### 1. Install Claude Code
@@ -180,21 +188,133 @@ uv run bba --dry-run scan nuclei <targets> --program example
 
 ## Tool Categories
 
-| Category | Tools |
-|----------|-------|
-| Subdomain Enum | subfinder, crtsh, amass, alterx, puredns, shuffledns |
-| DNS & Resolution | dnsx, hakrevdns, asnmap |
-| HTTP Probing | httpx, wafw00f, cdncheck, graphw00f, tlsx |
-| Port Scanning | naabu, nmap, shodan, uncover |
-| URL Harvesting | katana, gau, waymore, gowitness, cewler |
-| Vuln Scanning | nuclei, ffuf, feroxbuster, sqlmap, dalfox |
-| Parameter Discovery | arjun, paramspider |
-| JS Analysis | jsluice (URLs + secrets), retirejs |
-| Injection Testing | crlfuzz, sstimap, commix, ghauri, nosqli, xsstrike |
-| Cloud & Auth | s3scanner, jwt-tool, subzy, clairvoyance |
-| OOB & Bypass | interactsh, nomore403, cache-scanner, ppfuzz |
-| OSINT | trufflehog, gitleaks, git-dumper |
-| Utilities | uro, qsreplace, brutespray, notify |
+### Subdomain Enumeration (6)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| subfinder | Passive subdomain discovery via APIs | `uv run bba recon subfinder <domain> --program <prog>` |
+| crtsh | Certificate Transparency log search | `uv run bba recon crtsh <domain> --program <prog>` |
+| amass | 73+ data source subdomain enum | `uv run bba recon amass <domain> --program <prog>` |
+| alterx | Subdomain permutation generation | `uv run bba recon alterx <targets> --program <prog>` |
+| puredns | DNS resolution with wildcard filtering | `uv run bba recon puredns <targets> --program <prog>` |
+| shuffledns | Active DNS brute-force | `uv run bba recon shuffledns <domain> --program <prog>` |
+
+### DNS & Resolution (3)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| dnsx | DNS resolution + record extraction | `uv run bba recon dnsx <targets> --program <prog>` |
+| hakrevdns | Reverse DNS on IP ranges | `uv run bba recon hakrevdns <ips> --program <prog>` |
+| asnmap | ASN to IP block mapping | `uv run bba recon asnmap <domain> --program <prog>` |
+
+### HTTP Probing & Fingerprinting (5)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| httpx | HTTP probing + tech detection | `uv run bba recon httpx <targets> --program <prog>` |
+| wafw00f | WAF fingerprinting | `uv run bba recon wafw00f <url> --program <prog>` |
+| cdncheck | CDN/WAF detection | `uv run bba recon cdncheck <targets> --program <prog>` |
+| graphw00f | GraphQL endpoint detection | `uv run bba recon graphw00f <url> --program <prog>` |
+| tlsx | TLS/cert intelligence + SAN extraction | `uv run bba recon tlsx <targets> --program <prog>` |
+
+### Port Scanning & Infrastructure (4)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| naabu | Fast port scanning | `uv run bba recon naabu <targets> --program <prog> [--ports top-1000]` |
+| nmap | Service fingerprinting | `uv run bba recon nmap <target> --program <prog> [--ports 80,443]` |
+| shodan | Shodan API search | `uv run bba recon shodan <query> --program <prog> [--domain]` |
+| uncover | Multi-engine search (Shodan/Censys/FOFA) | `uv run bba scan uncover <query> --program <prog> [--engines]` |
+
+### URL Harvesting & Crawling (5)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| katana | Web crawler + endpoint extraction | `uv run bba recon katana <targets> --program <prog>` |
+| gau | Wayback Machine URL fetching | `uv run bba recon gau <domain> --program <prog>` |
+| waymore | Enhanced wayback (73+ sources) | `uv run bba recon waymore <domain> --program <prog>` |
+| gowitness | Screenshot capture | `uv run bba recon gowitness <targets> --program <prog>` |
+| cewler | Target-specific wordlist generation | `uv run bba recon cewler <url> --program <prog> [--depth 2]` |
+
+### Vulnerability Scanning (6)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| nuclei | Template-based vulnerability scanner | `uv run bba scan nuclei <targets> --program <prog> [--severity] [--tags]` |
+| ffuf | Web fuzzer (dirs, vhosts, params) | `uv run bba scan ffuf <url-with-FUZZ> --program <prog> [--wordlist]` |
+| feroxbuster | Recursive directory brute-force | `uv run bba scan feroxbuster <url> --program <prog> [--wordlist] [--depth]` |
+| sqlmap | SQL injection detection + exploitation | `uv run bba scan sqlmap <url> --program <prog> [--tamper] [--data]` |
+| dalfox | XSS scanner with DOM analysis | `uv run bba scan dalfox <url> --program <prog>` |
+| nikto | Web server vulnerability scanner | `uv run bba scan nikto <url> --program <prog>` |
+
+### Parameter & Endpoint Discovery (2)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| arjun | Hidden HTTP parameter discovery | `uv run bba scan arjun <url> --program <prog>` |
+| paramspider | URL parameter mining from archives | `uv run bba scan paramspider <domain> --program <prog>` |
+
+### JS Analysis (3)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| jsluice (URLs) | AST-based URL/path extraction from JS | `uv run bba scan jsluice-urls <js-url> --program <prog> --domain <d>` |
+| jsluice (secrets) | AST-based secret extraction from JS | `uv run bba scan jsluice-secrets <js-url> --program <prog> --domain <d>` |
+| retirejs | Vulnerable JS library detection | `uv run bba scan retirejs <path> --program <prog>` |
+
+### Injection Testing (8)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| crlfuzz | CRLF injection testing | `uv run bba scan crlfuzz <url> --program <prog>` |
+| sstimap | Server-side template injection | `uv run bba scan sstimap <url> --program <prog>` |
+| commix | Command injection testing | `uv run bba scan commix <url> --program <prog>` |
+| ghauri | Advanced SQL injection | `uv run bba scan ghauri <url> --program <prog> [--level] [--technique]` |
+| nosqli | NoSQL injection detection | `uv run bba scan nosqli <url> --program <prog>` |
+| xsstrike | XSS with WAF bypass | `uv run bba scan xsstrike <url> --program <prog> [--blind] [--crawl]` |
+| jwt-tool | JWT attack testing | `uv run bba scan jwt-tool <token> --program <prog> --domain <d> [--mode]` |
+| ppfuzz | Prototype pollution fuzzing | `uv run bba scan ppfuzz <targets> --program <prog>` |
+
+### Cloud & Auth (3)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| s3scanner | S3 bucket misconfiguration | `uv run bba scan s3scanner <bucket> --program <prog>` |
+| subzy | Subdomain takeover detection | `uv run bba scan subzy <targets> --program <prog>` |
+| clairvoyance | GraphQL schema reconstruction | `uv run bba scan clairvoyance <url> --program <prog>` |
+
+### OOB & Bypass (4)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| interactsh | Out-of-band callback generation/polling | `uv run bba scan interactsh-generate --program <prog>` |
+| nomore403 | Automated 403 bypass techniques | `uv run bba scan nomore403 <url> --program <prog>` |
+| cache-scanner | Web cache poisoning/deception | `uv run bba scan cache-scanner <url> --program <prog>` |
+| brutespray | Service credential brute-force | `uv run bba scan brutespray <nmap-xml> --program <prog>` |
+
+### OSINT & Secrets (3)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| git-dumper | Exposed .git directory dumping | `uv run bba recon git-dumper <url> --program <prog>` |
+| trufflehog | Secret scanning in repos/URLs | `uv run bba recon trufflehog <target> --program <prog>` |
+| gitleaks | Git secret scanning | `uv run bba recon gitleaks <source-path> --program <prog>` |
+
+### TLS/SSL Auditing (3)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| testssl | TLS/SSL configuration testing | `uv run bba scan testssl <url> --program <prog>` |
+| sslyze | SSL/TLS server analysis | `uv run bba scan sslyze <target> --program <prog>` |
+| security-headers | HTTP security header analysis | `uv run bba scan security-headers <url> --program <prog>` |
+
+### Pipeline Utilities (3)
+
+| Tool | Description | Command |
+|------|-------------|---------|
+| uro | URL deduplication and normalization | `uv run bba recon uro <targets> --program <prog>` |
+| qsreplace | Query string payload injection | `uv run bba recon qsreplace <targets> --program <prog> --payload <p>` |
+| notify | Send alerts to Slack/Discord/Telegram | `uv run bba scan notify <message> --program <prog>` |
 
 ## Database
 
@@ -207,6 +327,16 @@ uv run bba db urls --program example           # list discovered URLs
 uv run bba db findings --program example       # list all findings
 uv run bba db summary --program example        # full scan summary
 uv run bba db scan-history --program example   # past scan runs
+
+# Phase outputs (agent coordination)
+uv run bba db set-phase-output --program example --phase recon --key technology_profile --value '{"frameworks":["Express.js"]}'
+uv run bba db get-phase-output --program example --phase recon --key technology_profile
+
+# Coverage tracking
+uv run bba db coverage --program example
+
+# Update finding with reason
+uv run bba db update-finding 1 --status validated --reason "XSS confirmed"
 ```
 
 Or query directly:

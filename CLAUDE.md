@@ -130,7 +130,15 @@ uv run bba db screenshots --program <prog>
 uv run bba db findings --program <prog> [--severity] [--status]
 uv run bba db summary --program <prog>
 uv run bba db add-finding --program <prog> --domain <d> --url <u> --vuln-type <t> --severity-level <s> --tool <t> --evidence <e> [--confidence <c>]
-uv run bba db update-finding <id> --status <validated|false_positive|needs_review>
+uv run bba db update-finding <id> --status <validated|false_positive|needs_review> [--reason <text>]
+
+# Phase output storage (agent coordination)
+uv run bba db set-phase-output --program <prog> --phase <phase> --key <key> --value <json>
+uv run bba db get-phase-output --program <prog> --phase <phase> --key <key>
+
+# Coverage tracking
+uv run bba db coverage --program <prog>
+uv run bba db add-coverage --program <prog> --url <url> --phase <phase> --category <cat> --tested <bool> [--skip-reason <text>]
 
 # Scan state & monitoring
 uv run bba db scan-history --program <prog>
