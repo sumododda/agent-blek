@@ -183,7 +183,16 @@ COORDINATOR REASONING:
   2. [finding] → SKIP because [reason]
 ```
 
-## Phase 9: Deep Dives (Dynamic)
+## PHASE 9: DEEP DIVES
+
+For each deep-dive candidate identified in Phase 8c:
+1. Spawn a deep-dive agent (can be parallel for independent targets)
+2. Each deep-dive agent stores findings via `uv run bba db add-finding` with tool="manual-deep-dive"
+3. WAIT for ALL deep-dive agents to complete before proceeding
+4. Verify results: `uv run bba db findings --program $ARGUMENTS.program --status new`
+5. Only then proceed to Phase 10 (Validation)
+
+IMPORTANT: Do NOT proceed to validation until all deep-dive agents have finished.
 
 For EACH finding that warrants investigation, spawn a deep dive agent:
 
@@ -192,9 +201,7 @@ For EACH finding that warrants investigation, spawn a deep dive agent:
 > - Target: [specific URL]
 > - Hypothesis: [what vulnerability to test]
 > - Context: [what recon/scanning revealed]
-> Use curl for manual testing. Store confirmed findings via `uv run bba db add-finding`.
-
-You may spawn multiple deep dive agents in parallel for independent targets.
+> Use curl for manual testing. Store confirmed findings via `uv run bba db add-finding` with tool="manual-deep-dive".
 
 ## Phase 10: Validation
 

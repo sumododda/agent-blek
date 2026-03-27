@@ -184,6 +184,19 @@ After running all tools, provide a structured analysis:
 - URLs from gau: X
 ```
 
+## Structured Output Storage
+
+Before finishing, store structured data for downstream agents:
+
+```bash
+uv run bba db set-phase-output --program $PROGRAM --phase recon --key technology_profile --value '{"frameworks":[],"languages":[],"waf":null,"cms":null}'
+uv run bba db set-phase-output --program $PROGRAM --phase recon --key waf_detected --value '{"detected":false,"name":null,"confidence":0}'
+uv run bba db set-phase-output --program $PROGRAM --phase recon --key high_value_targets --value '["target1.example.com"]'
+uv run bba db set-phase-output --program $PROGRAM --phase recon --key live_count --value '42'
+```
+
+Fill in actual values from your analysis. Use valid JSON strings for all values.
+
 ## Rules
 
 - ONLY enumerate domains listed in the scope file
