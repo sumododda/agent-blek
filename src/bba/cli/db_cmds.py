@@ -71,7 +71,7 @@ async def cmd_db_add_finding(args: argparse.Namespace) -> None:
 async def cmd_db_update_finding(args: argparse.Namespace) -> None:
     db = await _bba_cli._get_db()
     try:
-        await db.update_finding_status(args.finding_id, args.status)
+        await db.update_finding_status(args.finding_id, args.status, reason=getattr(args, "reason", None))
         _bba_cli._output({"id": args.finding_id, "status": args.status, "updated": True})
     finally:
         await db.close()
@@ -171,6 +171,64 @@ async def cmd_db_scan_diff(args: argparse.Namespace) -> None:
         await db.close()
 
 
+async def cmd_db_set_phase_output(args: argparse.Namespace) -> None:
+    from bba.scan_state import ScanState
+    db = await _bba_cli._get_db()
+    try:
+        state = ScanState(db)
+        await state.initialize()
+        latest = await state.get_latest_run(args.program)
+        if not latest:
+            _bba_cli._output({"error": "No scan runs found for program"})
+            return
+        await state.set_phase_output(latest["id"], args.phase, args.key, args.value)
+        _bba_cli._output({"run_id": latest["id"], "phase": args.phase, "key": args.key, "stored": True})
+    finally:
+        await db.close()
+
+
+async def cmd_db_get_phase_output(args: argparse.Namespace) -> None:
+    from bba.scan_state import ScanState
+    db = await _bba_cli._get_db()
+    try:
+        state = ScanState(db)
+        await state.initialize()
+        latest = await state.get_latest_run(args.program)
+        if not latest:
+            _bba_cli._output({"error": "No scan runs found for program"})
+            return
+        value = await state.get_phase_output(latest["id"], args.phase, args.key)
+        _bba_cli._output({"phase": args.phase, "key": args.key, "value": value})
+    finally:
+        await db.close()
+
+
+async def cmd_db_coverage(args: argparse.Namespace) -> None:
+    db = await _bba_cli._get_db()
+    try:
+        summary = await db.get_coverage_summary(args.program)
+        _bba_cli._output(summary)
+    finally:
+        await db.close()
+
+
+async def cmd_db_add_coverage(args: argparse.Namespace) -> None:
+    from bba.scan_state import ScanState
+    db = await _bba_cli._get_db()
+    try:
+        state = ScanState(db)
+        await state.initialize()
+        latest = await state.get_latest_run(args.program)
+        if not latest:
+            _bba_cli._output({"error": "No scan runs found for program"})
+            return
+        tested = args.tested.lower() in ("true", "1", "yes")
+        await db.add_coverage(latest["id"], args.program, args.url, args.phase, args.category, tested, args.skip_reason)
+        _bba_cli._output({"stored": True})
+    finally:
+        await db.close()
+
+
 def register_db_commands(subparsers: argparse._SubParsersAction) -> None:
     """Register all db subcommands onto the top-level subparsers."""
     db = subparsers.add_parser("db", help="Database queries")
@@ -208,6 +266,7 @@ def register_db_commands(subparsers: argparse._SubParsersAction) -> None:
     db_upd = db_sub.add_parser("update-finding", help="Update finding status")
     db_upd.add_argument("finding_id", type=int, help="Finding ID")
     db_upd.add_argument("--status", required=True, choices=["validated", "false_positive", "needs_review"], help="New status")
+    db_upd.add_argument("--reason", default=None, help="Reason for status change")
     db_upd.set_defaults(func=cmd_db_update_finding)
 
     db_ports = db_sub.add_parser("ports", help="List discovered ports")
@@ -247,3 +306,29 @@ def register_db_commands(subparsers: argparse._SubParsersAction) -> None:
     db_sd.add_argument("--category", default="subdomains", choices=["subdomains", "urls", "services", "findings"])
     db_sd.add_argument("--program", required=True, help="Program name")
     db_sd.set_defaults(func=cmd_db_scan_diff)
+
+    db_spo = db_sub.add_parser("set-phase-output", help="Store structured phase output")
+    db_spo.add_argument("--program", required=True, help="Program name")
+    db_spo.add_argument("--phase", required=True, help="Phase name")
+    db_spo.add_argument("--key", required=True, help="Output key")
+    db_spo.add_argument("--value", required=True, help="Output value (JSON string)")
+    db_spo.set_defaults(func=cmd_db_set_phase_output)
+
+    db_gpo = db_sub.add_parser("get-phase-output", help="Retrieve structured phase output")
+    db_gpo.add_argument("--program", required=True, help="Program name")
+    db_gpo.add_argument("--phase", required=True, help="Phase name")
+    db_gpo.add_argument("--key", required=True, help="Output key")
+    db_gpo.set_defaults(func=cmd_db_get_phase_output)
+
+    db_cov = db_sub.add_parser("coverage", help="Show coverage summary")
+    db_cov.add_argument("--program", required=True, help="Program name")
+    db_cov.set_defaults(func=cmd_db_coverage)
+
+    db_acov = db_sub.add_parser("add-coverage", help="Add coverage entry")
+    db_acov.add_argument("--program", required=True, help="Program name")
+    db_acov.add_argument("--url", required=True, help="URL tested")
+    db_acov.add_argument("--phase", required=True, help="Phase name")
+    db_acov.add_argument("--category", default=None, help="Test category")
+    db_acov.add_argument("--tested", required=True, help="Whether URL was tested (true/false)")
+    db_acov.add_argument("--skip-reason", default=None, help="Reason for skipping")
+    db_acov.set_defaults(func=cmd_db_add_coverage)
