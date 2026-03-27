@@ -8,6 +8,8 @@ from urllib.parse import urlparse
 
 import yaml
 
+from bba.config import resolve_api_key
+
 
 @dataclass
 class ScopeConfig:
@@ -17,6 +19,7 @@ class ScopeConfig:
     in_scope_cidrs: list[str] = field(default_factory=list)
     out_of_scope_domains: list[str] = field(default_factory=list)
     out_of_scope_paths: list[str] = field(default_factory=list)
+    api_keys: dict[str, str | None] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict) -> ScopeConfig:
@@ -26,6 +29,8 @@ class ScopeConfig:
         if not in_scope or not in_scope.get("domains"):
             raise ValueError("Scope config must include 'in_scope' with at least one domain")
         out_scope = data.get("out_of_scope", {})
+        raw_keys = data.get("api_keys", {})
+        resolved_keys = {k: resolve_api_key(v) for k, v in raw_keys.items()}
         return cls(
             program=data["program"],
             platform=data.get("platform", ""),
@@ -33,6 +38,7 @@ class ScopeConfig:
             in_scope_cidrs=in_scope.get("cidrs", []),
             out_of_scope_domains=out_scope.get("domains", []),
             out_of_scope_paths=out_scope.get("paths", []),
+            api_keys=resolved_keys,
         )
 
     @classmethod
@@ -41,9 +47,18 @@ class ScopeConfig:
         return cls.from_dict(data)
 
 
-def _domain_matches(pattern: str, domain: str) -> bool:
+def _normalize_domain(domain: str) -> str:
     domain = domain.lower().rstrip(".")
-    pattern = pattern.lower().rstrip(".")
+    try:
+        domain = domain.encode("idna").decode("ascii")
+    except (UnicodeError, UnicodeDecodeError):
+        pass
+    return domain
+
+
+def _domain_matches(pattern: str, domain: str) -> bool:
+    domain = _normalize_domain(domain)
+    pattern = _normalize_domain(pattern)
 
     if pattern == domain:
         return True
@@ -64,7 +79,7 @@ class ScopeValidator:
         ]
 
     def is_domain_in_scope(self, domain: str) -> bool:
-        domain = domain.lower().rstrip(".")
+        domain = _normalize_domain(domain)
 
         for pattern in self.config.out_of_scope_domains:
             if _domain_matches(pattern, domain):
