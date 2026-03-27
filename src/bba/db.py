@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS findings (
     confidence REAL DEFAULT 0.0,
     status TEXT DEFAULT 'new',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    validated_at TIMESTAMP
+    validated_at TIMESTAMP,
+    validation_reason TEXT
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -129,6 +130,34 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp);
 CREATE INDEX IF NOT EXISTS idx_audit_log_target ON audit_log(target);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_findings_dedup ON findings(program, url, vuln_type);
+
+CREATE TABLE IF NOT EXISTS phase_outputs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL,
+    phase TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(run_id, phase, key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_phase_outputs_lookup ON phase_outputs(run_id, phase);
+
+CREATE TABLE IF NOT EXISTS coverage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL,
+    program TEXT NOT NULL,
+    url TEXT NOT NULL,
+    phase TEXT NOT NULL,
+    category TEXT,
+    tested BOOLEAN DEFAULT 0,
+    skip_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(run_id, url, phase, category)
+);
+
+CREATE INDEX IF NOT EXISTS idx_coverage_program ON coverage(program);
+CREATE INDEX IF NOT EXISTS idx_coverage_run ON coverage(run_id, phase);
 """
 
 
@@ -144,6 +173,13 @@ class Database:
         self._conn.row_factory = aiosqlite.Row
         await self._conn.executescript(SCHEMA)
         await self._conn.commit()
+
+        # Migration: add validation_reason if missing
+        try:
+            await self._conn.execute("ALTER TABLE findings ADD COLUMN validation_reason TEXT")
+            await self._conn.commit()
+        except Exception:
+            pass
 
     async def close(self):
         if self._conn:
@@ -236,10 +272,10 @@ class Database:
             await self._conn.commit()
         return cursor.lastrowid
 
-    async def update_finding_status(self, finding_id: int, status: str) -> None:
+    async def update_finding_status(self, finding_id: int, status: str, reason: str | None = None) -> None:
         await self._conn.execute(
-            "UPDATE findings SET status = ?, validated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (status, finding_id),
+            "UPDATE findings SET status = ?, validated_at = CURRENT_TIMESTAMP, validation_reason = ? WHERE id = ?",
+            (status, reason, finding_id),
         )
         if not self._batch_mode:
             await self._conn.commit()
@@ -486,3 +522,30 @@ class Database:
             row = await cursor.fetchone()
             result[table] = row[0]
         return result
+
+    # --- Coverage ---
+
+    async def add_coverage(
+        self, run_id: int, program: str, url: str, phase: str,
+        category: str | None, tested: bool, skip_reason: str | None = None,
+    ) -> None:
+        await self._conn.execute(
+            """INSERT OR IGNORE INTO coverage
+               (run_id, program, url, phase, category, tested, skip_reason)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (run_id, program, url, phase, category, tested, skip_reason),
+        )
+        if not self._batch_mode:
+            await self._conn.commit()
+
+    async def get_coverage_summary(self, program: str) -> list[dict]:
+        cursor = await self._conn.execute(
+            """SELECT phase, category,
+                      SUM(CASE WHEN tested = 1 THEN 1 ELSE 0 END) as tested,
+                      SUM(CASE WHEN tested = 0 THEN 1 ELSE 0 END) as skipped,
+                      COUNT(*) as total
+               FROM coverage WHERE program = ? GROUP BY phase, category""",
+            (program,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
