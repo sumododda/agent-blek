@@ -1,16 +1,45 @@
-program: example-corp
+program: acme-corp
 platform: hackerone
+handle: acme-corp
+
 in_scope:
   domains:
-    - "*.example.com"
-    - "example.com"
-    - "api.example.com"
+    - "*.acme-corp.com"
+    - "*.api.acme-corp.com"
+    - "acme-corp.com"
+    - "app.acme-corp.com"
+    - "api.acme-corp.com"
+    - "dashboard.acme-corp.com"
+    - "auth.acme-corp.com"
   cidrs:
-    - "192.168.1.0/24"
+    - "203.0.113.0/24"
+
 out_of_scope:
   domains:
-    - "admin.example.com"
-    - "*.staging.example.com"
+    - "status.acme-corp.com"
+    - "docs.acme-corp.com"
+    - "*.staging.acme-corp.com"
+    - "corporate-blog.acme-corp.com"
   paths:
     - "/logout"
     - "/account/delete"
+    - "/account/deactivate"
+    - "/unsubscribe"
+
+rate_limit:
+  requests_per_second: 10
+  burst: 20
+
+api_keys:
+  shodan: "${SHODAN_API_KEY}"
+  censys_id: "${CENSYS_API_ID}"
+  censys_secret: "${CENSYS_API_SECRET}"
+  github: "${GITHUB_TOKEN}"
+
+notes: |
+  HackerOne program for Acme Corp.
+  Main app is a React SPA backed by Express.js API.
+  auth.acme-corp.com runs Keycloak — test for OIDC misconfigs.
+  API uses JWT (RS256) — check for algorithm confusion.
+  WAF: Cloudflare on *.acme-corp.com — use conservative rate limits.
+  Mobile apps in scope on the platform but not testable via CLI.

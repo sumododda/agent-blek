@@ -114,27 +114,57 @@ Downloads SecLists, Assetnote DNS, OneListForAll, and resolver lists into `data/
 Create a YAML scope file in `data/programs/`:
 
 ```yaml
-# data/programs/example.yaml
-program: example
-platform: hackerone
-handle: example
+# data/programs/acme-corp.yaml
+program: acme-corp
+platform: hackerone          # hackerone | bugcrowd | intigriti | self-hosted
+handle: acme-corp            # platform handle (used by scope import)
+
 in_scope:
   domains:
-    - "example.com"
-    - "*.example.com"
-  cidrs: []
+    # Wildcards — cover all subdomains
+    - "*.acme-corp.com"
+    - "*.api.acme-corp.com"
+
+    # Explicit high-value targets
+    - "acme-corp.com"
+    - "app.acme-corp.com"
+    - "api.acme-corp.com"
+    - "dashboard.acme-corp.com"
+    - "auth.acme-corp.com"
+
+  cidrs:
+    - "203.0.113.0/24"       # Primary hosting range
+
 out_of_scope:
   domains:
-    - "admin.example.com"
-    - "*.staging.example.com"
+    - "status.acme-corp.com"           # Third-party status page
+    - "docs.acme-corp.com"             # Static docs (no vuln impact)
+    - "*.staging.acme-corp.com"        # Staging (separate program)
+    - "corporate-blog.acme-corp.com"   # WordPress managed by vendor
+
   paths:
     - "/logout"
     - "/account/delete"
+    - "/account/deactivate"
+    - "/unsubscribe"
+
 rate_limit:
-  requests_per_second: 10
-  burst: 20
+  requests_per_second: 10   # Requests per second per target
+  burst: 20                  # Token bucket burst size
+
+api_keys:
+  shodan: "${SHODAN_API_KEY}"
+  censys_id: "${CENSYS_API_ID}"
+  censys_secret: "${CENSYS_API_SECRET}"
+  github: "${GITHUB_TOKEN}"
+
 notes: |
-  Example program configuration.
+  HackerOne program for Acme Corp.
+  Main app is a React SPA backed by Express.js API.
+  auth.acme-corp.com runs Keycloak — test for OIDC misconfigs.
+  API uses JWT (RS256) — check for algorithm confusion.
+  WAF: Cloudflare on *.acme-corp.com — use conservative rate limits.
+  Mobile apps in scope on the platform but not testable via CLI.
 ```
 
 Or import directly from a bug bounty platform:
